@@ -53,6 +53,49 @@ Retail Forge AI breaks down the creative barrier preventing small brands from ac
 - HuggingFace BERT (text classification)
 
 ## 📦 Installation
+## Database Setup
+
+### 1. Install PostgreSQL
+See [docs/database/README.md](docs/database/README.md)
+
+### 2. Create Database
+```bash
+createdb retail_forge_ai
+psql retail_forge_ai < docs/database/schema.sql
+```
+
+### 3. Configure Environment
+Copy `.env.example` to `.env` and update DATABASE_URL:
+```
+DATABASE_URL=postgresql://retail_forge:dev_password_123@localhost:5432/retail_forge_ai
+```
+
+## Redis Setup
+
+### Install Redis
+```bash
+# Mac
+brew install redis
+brew services start redis
+
+# Ubuntu
+sudo apt install redis-server
+sudo systemctl start redis
+```
+
+## Project Structure
+```
+retail-forge-ai/
+├── frontend/          # React + Vite frontend
+├── backend/           # Node.js + Express API
+│   ├── api/          # Routes, controllers, services
+│   ├── ai-engine/    # AI agents and orchestration
+│   ├── config/       # Database, Redis, AWS config
+│   ├── db/           # Database queries
+│   └── utils/        # Helper functions
+├── docs/             # Documentation
+└── tests/            # Test files
+```
 
 ### Prerequisites
 - Node.js 18+
