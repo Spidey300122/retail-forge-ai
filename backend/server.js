@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import logger from './utils/logger.js';
 import db from './config/database.js';
 import redis from './config/redis.js';
+import uploadRoutes from './api/routes/upload.js';
+import aiRoutes from './api/routes/ai.js';
 
 dotenv.config();
 
@@ -17,6 +19,10 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+
+app.use('/api/ai', aiRoutes);
+
 
 // Request logging
 app.use((req, res, next) => {
@@ -48,7 +54,7 @@ app.get('/health', async (req, res) => {
     });
   }
 });
-
+app.use('/api/upload', uploadRoutes);
 // API routes (will add later)
 app.get('/api/test', (req, res) => {
   res.json({ 
@@ -79,8 +85,31 @@ app.use((req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  logger.info(`Server running on http://localhost:${PORT}`);
-  logger.info(`API available at http://localhost:${PORT}/api`);
-});
+// ... existing imports and code ...
+
+// Start server with DB Check
+const startServer = async () => {
+  try {
+    // 1. Force a Test Connection to Postgres
+    // This triggers the pool.on('connect') event in your database.js
+    await db.query('SELECT 1'); 
+    console.log('✅ Database connection verified');
+
+    app.listen(PORT, () => {
+      logger.info(`Server running on http://localhost:${PORT}`);
+      logger.info(`API available at http://localhost:${PORT}/api`);
+    });
+
+  } catch (error) {
+    logger.error('❌ Failed to connect to the database:', error);
+    
+    // Detailed error logging to help you debug
+    if (error.message.includes('password')) {
+      console.error('👉 TIP: Check your .env file. Ensure DATABASE_URL is set correctly.');
+      console.error('👉 TIP: Check config/database.js. If using "password:", make sure it is wrapped in quotes.');
+    }
+    process.exit(1);
+  }
+};
+
+startServer();
