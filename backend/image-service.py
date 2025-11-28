@@ -5,6 +5,12 @@ import uvicorn
 from dotenv import load_dotenv
 import os
 from datetime import datetime
+import shutil
+
+# Import our processing functions
+from image_processing.background_removal import remove_background
+from image_processing.color_extraction import extract_colors
+from image_processing.optimization import optimize_image
 
 load_dotenv()
 
@@ -19,6 +25,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create temp directories
+os.makedirs("temp/uploads", exist_ok=True)
+os.makedirs("temp/processed", exist_ok=True)
+
 @app.get("/health")
 async def health_check():
     return {
@@ -27,27 +37,68 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat()
     }
 
-@app.post("/process/test")
-async def test_endpoint():
-    return {
-        "message": "Image service is working!",
-        "version": "1.0.0"
-    }
+@app.post("/process/remove-background")
+async def remove_bg_endpoint(file: UploadFile = File(...)):
+    """Remove background from uploaded image"""
+    try:
+        # Save uploaded file
+        input_path = f"temp/uploads/{file.filename}"
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Process
+        output_path = f"temp/processed/{file.filename.rsplit('.', 1)[0]}_nobg.png"
+        result = remove_background(input_path, output_path)
+        
+        if not result["success"]:
+            raise HTTPException(500, result["error"])
+        
+        return {
+            "success": True,
+            "output_path": output_path,
+            "message": "Background removed successfully"
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
-@app.post("/process/upload")
-async def upload_image(file: UploadFile = File(...)):
-    """Test image upload"""
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(400, "File must be an image")
-    
-    contents = await file.read()
-    
-    return {
-        "success": True,
-        "filename": file.filename,
-        "size": len(contents),
-        "type": file.content_type
-    }
+@app.post("/process/extract-colors")
+async def extract_colors_endpoint(file: UploadFile = File(...), count: int = 5):
+    """Extract dominant colors from image"""
+    try:
+        # Save uploaded file
+        input_path = f"temp/uploads/{file.filename}"
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Extract colors
+        result = extract_colors(input_path, count)
+        
+        if not result["success"]:
+            raise HTTPException(500, result["error"])
+        
+        return result
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.post("/process/optimize")
+async def optimize_endpoint(file: UploadFile = File(...), target_size_kb: int = 500):
+    """Optimize image to target size"""
+    try:
+        # Save uploaded file
+        input_path = f"temp/uploads/{file.filename}"
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Optimize
+        output_path = f"temp/processed/{file.filename.rsplit('.', 1)[0]}_opt.jpg"
+        result = optimize_image(input_path, output_path, target_size_kb)
+        
+        if not result["success"]:
+            raise HTTPException(500, result["error"])
+        
+        return result
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 if __name__ == "__main__":
     port = int(os.getenv("IMAGE_SERVICE_PORT", 8000))

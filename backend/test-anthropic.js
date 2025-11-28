@@ -12,7 +12,8 @@ async function testAnthropic() {
     console.log('Testing Anthropic API...');
     
     const message = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      // FIX: Use the active Claude Sonnet 4.5 model for Nov 2025
+      model: "claude-sonnet-4-5-20250929", 
       max_tokens: 50,
       messages: [
         { role: "user", content: "Say 'Claude is working!'" }
