@@ -3,17 +3,18 @@ import { fabric } from 'fabric';
 import useCanvasStore from '../../store/canvasStore';
 import CanvasToolbar from './CanvasToolbar';
 import CanvasControls from './CanvasControls';
-import useKeyboard from '../../hooks/useKeyboard'; // ADD THIS
+import Sidebar from '../UI/Sidebar';
+import useKeyboard from '../../hooks/useKeyboard';
 import './canvas.css';
 
 function CanvasEditor() {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const fabricCanvasRef = useRef(null);
-  const { setCanvas, saveState } = useCanvasStore(); // ADD saveState
+  const { setCanvas, saveState } = useCanvasStore();
   const [isReady, setIsReady] = useState(false);
 
-  // ADD THIS - Enable keyboard shortcuts
+  // Enable keyboard shortcuts
   useKeyboard();
 
   useEffect(() => {
@@ -22,8 +23,8 @@ function CanvasEditor() {
 
     // Initialize Fabric.js canvas
     const fabricCanvas = new fabric.Canvas(canvasRef.current, {
-      width: 500,
-      height: 400,
+      width: 1080,
+      height: 1080,
       backgroundColor: '#ffffff',
       selection: true,
       preserveObjectStacking: true,
@@ -101,6 +102,65 @@ function CanvasEditor() {
     };
   }, [isReady, saveState]);
 
+  // Handler to add images to canvas
+  const handleAddToCanvas = (uploadData) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas || !uploadData.url) return;
+
+    fabric.Image.fromURL(uploadData.url, (img) => {
+      // Scale image to fit canvas (max 800px)
+      const maxSize = 800;
+      const scale = Math.min(
+        maxSize / img.width,
+        maxSize / img.height,
+        1
+      );
+
+      img.set({
+        left: canvas.width / 2,
+        top: canvas.height / 2,
+        originX: 'center',
+        originY: 'center',
+        scaleX: scale,
+        scaleY: scale,
+      });
+
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+      saveState();
+
+      console.log('✅ Image added to canvas');
+    }, { crossOrigin: 'anonymous' });
+  };
+
+  // Handler to add text to canvas
+  const handleAddText = (textConfig) => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    const text = new fabric.IText(textConfig.text, {
+      left: canvas.width / 2,
+      top: canvas.height / 2,
+      originX: 'center',
+      originY: 'center',
+      fontSize: textConfig.fontSize,
+      fontWeight: textConfig.fontWeight,
+      fill: '#000000',
+      fontFamily: 'Arial',
+    });
+
+    canvas.add(text);
+    canvas.setActiveObject(text);
+    canvas.renderAll();
+
+    // Enter edit mode
+    text.enterEditing();
+    text.selectAll();
+
+    saveState();
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f9fafb' }}>
       {/* Toolbar */}
@@ -108,6 +168,12 @@ function CanvasEditor() {
 
       {/* Main canvas area - Using inline styles to force layout */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        {/* Left Sidebar */}
+        <Sidebar 
+          onAddToCanvas={handleAddToCanvas}
+          onAddText={handleAddText}
+        />
+
         {/* Canvas container */}
         <div
           ref={containerRef}
@@ -149,7 +215,7 @@ function CanvasEditor() {
         fontSize: '14px',
         flexShrink: 0
       }}>
-        <span>Canvas: 500x400px</span>
+        <span>Canvas: 1080x1080px</span>
         <span style={{ margin: '0 16px' }}>|</span>
         <span>{isReady ? '✅ Ready' : '⏳ Initializing...'}</span>
       </div>
