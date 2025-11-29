@@ -1,0 +1,63 @@
+/* Crop Tool Overlay */
+.crop-tool-overlay {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+}
+
+.crop-tool-message {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.crop-tool-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.crop-confirm-btn {
+  padding: 10px 16px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.crop-confirm-btn:hover {
+  background-color: #1d4ed8;
+}
+
+.crop-cancel-btn {
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.crop-cancel-btn:hover {
+  background-color: #f9fafb;
+}

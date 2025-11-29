@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
 import './CanvasControls.css';
+import ImageControls from './ImageControls';
 
 function CanvasControls({ isReady }) {
   const { canvas } = useCanvasStore();
@@ -139,6 +140,11 @@ function CanvasControls({ isReady }) {
             <li>• Alt/Cmd + drag to pan</li>
             <li>• Click object to select</li>
           </ul>
+        </div>
+
+        {/* Added Image Controls Section */}
+        <div style={{ marginTop: '24px', borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
+          <ImageControls />
         </div>
       </div>
     </div>

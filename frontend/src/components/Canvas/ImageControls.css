@@ -1,0 +1,228 @@
+/* Image Controls Container */
+.image-controls {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.image-controls-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.no-selection {
+  padding: 32px 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Control Section */
+.control-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-section-label {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Dimensions */
+.dimensions-lock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dimensions-lock input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.dimensions-lock span {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.dimensions-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.dimension-input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dimension-input-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.dimension-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.dimension-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.dimension-separator {
+  padding-bottom: 8px;
+  color: #9ca3af;
+}
+
+/* Button Groups */
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+.button-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Control Buttons */
+.control-btn {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1f2937;
+  flex: 1;
+}
+
+.control-btn:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control-btn-full {
+  width: 100%;
+}
+
+/* Align Grid */
+.align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.align-btn {
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 12px;
+  color: #1f2937;
+}
+
+.align-btn:hover {
+  background-color: #f9fafb;
+}
+
+/* Background Removal Button */
+.bg-remove-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.bg-remove-btn:hover:not(:disabled) {
+  background-color: #6d28d9;
+}
+
+.bg-remove-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bg-remove-note {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* Reset Button */
+.reset-btn {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.reset-btn:hover {
+  background-color: #f9fafb;
+}
+
+/* Loading Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
