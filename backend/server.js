@@ -6,6 +6,7 @@ import db from './config/database.js';
 import redis from './config/redis.js';
 import uploadRoutes from './api/routes/upload.js';
 import aiRoutes from './api/routes/ai.js';
+import imageRoutes from './api/routes/image.js';
 
 dotenv.config();
 
@@ -22,7 +23,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 
 app.use('/api/ai', aiRoutes);
-
+app.use('/api/image', imageRoutes);
 
 // Request logging
 app.use((req, res, next) => {
