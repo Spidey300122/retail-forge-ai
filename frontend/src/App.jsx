@@ -1,9 +1,12 @@
-import Test from './pages/Test';
+import CanvasEditor from './components/Canvas/CanvasEditor';
+import useKeyboard from './hooks/useKeyboard'; // ← ADDED
 
 function App() {
+  useKeyboard(); // ← ADDED - Activates keyboard shortcuts
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Test />
+    <div className="App">
+      <CanvasEditor />
     </div>
   );
 }

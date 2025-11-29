@@ -13,9 +13,10 @@
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
+    "@types/fabric": "^5.3.10",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
-    "fabric": "^6.9.0",
+    "fabric": "^5.3.0",
     "file-saver": "^2.0.5",
     "immer": "^11.0.0",
     "jszip": "^3.10.1",

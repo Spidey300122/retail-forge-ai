@@ -141,6 +141,26 @@ npm run dev
 - [User Guide](./docs/user-guide/README.md)
 - [Compliance Rules](./docs/compliance-rules.md)
 
+## API Keys Required
+
+1. **OpenAI API** - https://platform.openai.com/api-keys
+2. **Anthropic API** - https://console.anthropic.com/settings/keys
+3. **Stability AI** - https://platform.stability.ai/account/keys
+4. **AWS S3** - https://console.aws.amazon.com/iam/
+
+See [docs/day2-summary.md](docs/day2-summary.md) for setup details.
+
+## Running Tests
+```bash
+# Integration tests
+cd backend
+node test-integration.js
+
+# Frontend tests
+cd frontend
+npm run dev
+# Visit http://localhost:5173 and click test buttons
+
 ## 👥 Team
 
 **Team ATX - Tesco Retail Media Hackathon 2025**

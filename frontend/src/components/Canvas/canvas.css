@@ -1,0 +1,20 @@
+.canvas-wrapper {
+  position: relative;
+  background: white;
+  border-radius: 4px;
+}
+
+.canvas-wrapper canvas {
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom fabric.js controls styling */
+.canvas-container {
+  margin: 0 auto;
+}
+
+/* Selection box styling */
+.upper-canvas {
+  cursor: default;
+}
