@@ -1,0 +1,117 @@
+/* Sidebar Container */
+.sidebar-root {
+  width: 320px;
+  background-color: white;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  height: 100%; /* Ensure full height */
+}
+
+/* Tabs Header */
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: white;
+  flex-shrink: 0; /* Don't shrink */
+}
+
+.sidebar-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-tab:hover {
+  color: #111827;
+  background-color: #f9fafb;
+}
+
+.sidebar-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+/* Content Area - FIXED HEIGHT */
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto; /* Enable scrolling */
+  overflow-x: hidden; /* Hide horizontal scroll */
+  padding: 16px;
+  background-color: white;
+  min-height: 0; /* Allow flex shrinking */
+}
+
+.sidebar-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+/* Text Buttons */
+.text-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.text-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+}
+
+.text-btn-primary {
+  background-color: #2563eb;
+}
+
+.text-btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.text-btn-secondary {
+  background-color: #4b5563;
+}
+
+.text-btn-secondary:hover {
+  background-color: #374151;
+}
+
+.text-btn-tertiary {
+  background-color: #6b7280;
+}
+
+.text-btn-tertiary:hover {
+  background-color: #4b5563;
+}
+
+.text-btn-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.text-btn-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-top: 2px;
+}

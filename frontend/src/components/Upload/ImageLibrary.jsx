@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, XCircle } from 'lucide-react';
+import './ImageLibrary.css';
 
 function ImageLibrary({ onSelectImage }) {
   const [images, setImages] = useState([]);
@@ -8,12 +9,10 @@ function ImageLibrary({ onSelectImage }) {
   useEffect(() => {
     console.log('🎬 ImageLibrary mounted');
     
-    // Load images function
     const loadImages = () => {
       try {
         const stored = localStorage.getItem('uploaded_images');
         console.log('🔍 ImageLibrary: Loading from localStorage');
-        console.log('📦 Raw data:', stored ? 'exists' : 'null');
         
         if (stored) {
           const parsed = JSON.parse(stored);
@@ -29,7 +28,6 @@ function ImageLibrary({ onSelectImage }) {
       }
     };
 
-    // Initial load
     loadImages();
 
     // Poll for updates every 3 seconds
@@ -60,65 +58,80 @@ function ImageLibrary({ onSelectImage }) {
     }
   };
 
+  const handleClearAll = () => {
+    if (confirm('Delete all images? This cannot be undone.')) {
+      setImages([]);
+      localStorage.removeItem('uploaded_images');
+      console.log('🗑️ Cleared all images');
+    }
+  };
+
   console.log('🎨 ImageLibrary rendering with', images.length, 'images');
 
-  if (images.length === 0) {
-    return (
-      <div className="text-center text-gray-500 py-8">
-        <p className="font-medium">No images uploaded yet</p>
-        <p className="text-sm mt-2">Upload some images to get started</p>
-        <p className="text-xs mt-4 text-gray-400">
-          Debug: {localStorage.getItem('uploaded_images') ? 'Data exists' : 'No data'}
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {images.map((image, index) => (
-        <div
-          key={image.imageId || index}
-          className="group relative aspect-square rounded-lg overflow-hidden border border-gray-200 hover:border-blue-500 cursor-pointer transition-colors"
-          onClick={() => handleAddToCanvas(image)}
-        >
-          <img
-            src={image.url}
-            alt={image.filename || 'Image'}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              console.error('❌ Failed to load image:', image.imageId);
-              e.target.style.display = 'none';
-            }}
-          />
-
-          {/* Image filename overlay */}
-          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-1 truncate">
-            {image.filename || image.imageId}
-          </div>
-
-          {/* Hover controls */}
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddToCanvas(image);
-              }}
-              className="opacity-0 group-hover:opacity-100 p-2 bg-white rounded-full hover:bg-gray-100 transition-opacity"
-              title="Add to canvas"
-            >
-              <Plus size={18} />
-            </button>
-            <button
-              onClick={(e) => handleDelete(image.imageId, e)}
-              className="opacity-0 group-hover:opacity-100 p-2 bg-white rounded-full hover:bg-gray-100 transition-opacity"
-              title="Delete"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
+    <div>
+      {images.length > 0 && (
+        <div className="image-library-header">
+          <span className="image-count">{images.length} image(s)</span>
+          <button onClick={handleClearAll} className="clear-all-btn">
+            <XCircle size={16} />
+            Clear All
+          </button>
         </div>
-      ))}
+      )}
+
+      {images.length === 0 ? (
+        <div className="empty-state">
+          <p className="empty-title">No images uploaded yet</p>
+          <p className="empty-subtitle">Upload some images to get started</p>
+        </div>
+      ) : (
+        <div className="image-grid">
+          {images.map((image, index) => (
+            <div
+              key={image.imageId || index}
+              className="image-card"
+              onClick={() => handleAddToCanvas(image)}
+            >
+              <img
+                src={image.url}
+                alt={image.filename || 'Image'}
+                className="image-thumbnail"
+                onError={(e) => {
+                  console.error('❌ Failed to load image:', image.imageId);
+                  e.target.style.display = 'none';
+                }}
+              />
+
+              {/* Filename overlay */}
+              <div className="image-filename">
+                {image.filename || image.imageId}
+              </div>
+
+              {/* Hover controls */}
+              <div className="image-overlay">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddToCanvas(image);
+                  }}
+                  className="overlay-btn overlay-btn-add"
+                  title="Add to canvas"
+                >
+                  <Plus size={18} />
+                </button>
+                <button
+                  onClick={(e) => handleDelete(image.imageId, e)}
+                  className="overlay-btn overlay-btn-delete"
+                  title="Delete"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

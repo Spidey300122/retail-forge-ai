@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
+import './CanvasControls.css';
 
 function CanvasControls({ isReady }) {
   const { canvas } = useCanvasStore();
@@ -9,13 +10,11 @@ function CanvasControls({ isReady }) {
   useEffect(() => {
     if (!canvas) return;
 
-    // Enable zoom with mouse wheel
     const handleWheel = (opt) => {
       const delta = opt.e.deltaY;
       let newZoom = canvas.getZoom();
       newZoom *= 0.999 ** delta;
 
-      // Limit zoom
       if (newZoom > 3) newZoom = 3;
       if (newZoom < 0.1) newZoom = 0.1;
 
@@ -27,7 +26,6 @@ function CanvasControls({ isReady }) {
 
     canvas.on('mouse:wheel', handleWheel);
 
-    // Enable panning
     let isPanning = false;
     let lastPosX = 0;
     let lastPosY = 0;
@@ -100,28 +98,25 @@ function CanvasControls({ isReady }) {
   };
 
   return (
-    <div className="w-64 h-full bg-white border-l border-gray-200 p-4 overflow-y-auto">
-      <h3 className="font-semibold text-gray-800 mb-4">Canvas Controls</h3>
+    <div className="canvas-controls">
+      <h3 className="controls-heading">Canvas Controls</h3>
 
-      {/* Zoom controls */}
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm text-gray-600 mb-2 block">Zoom</label>
-          <div className="flex items-center gap-2">
+      <div className="controls-section">
+        <div className="zoom-control">
+          <label className="control-label">Zoom</label>
+          <div className="zoom-buttons">
             <button
               onClick={handleZoomOut}
               disabled={!isReady}
-              className="p-2 border rounded hover:bg-gray-50 disabled:opacity-50"
+              className="zoom-btn"
             >
               <ZoomOut size={18} />
             </button>
-            <div className="flex-1 text-center font-mono text-sm">
-              {zoom}%
-            </div>
+            <div className="zoom-display">{zoom}%</div>
             <button
               onClick={handleZoomIn}
               disabled={!isReady}
-              className="p-2 border rounded hover:bg-gray-50 disabled:opacity-50"
+              className="zoom-btn"
             >
               <ZoomIn size={18} />
             </button>
@@ -131,15 +126,15 @@ function CanvasControls({ isReady }) {
         <button
           onClick={handleResetZoom}
           disabled={!isReady}
-          className="w-full px-3 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="reset-btn"
         >
           <Maximize size={18} />
-          Reset View
+          <span>Reset View</span>
         </button>
 
-        <div className="text-xs text-gray-500 mt-4 p-3 bg-gray-50 rounded">
-          <p className="font-semibold mb-1">Tips:</p>
-          <ul className="space-y-1">
+        <div className="tips-box">
+          <p className="tips-heading">Tips:</p>
+          <ul className="tips-list">
             <li>• Scroll to zoom</li>
             <li>• Alt/Cmd + drag to pan</li>
             <li>• Click object to select</li>

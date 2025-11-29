@@ -1,0 +1,141 @@
+/* Canvas Controls Container */
+.canvas-controls {
+  width: 256px;
+  background-color: white;
+  border-left: 1px solid #e5e7eb;
+  padding: 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+
+/* Custom Scrollbar (Webkit browsers) */
+.canvas-controls::-webkit-scrollbar {
+  width: 6px;
+}
+
+.canvas-controls::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.canvas-controls::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.canvas-controls::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+.controls-heading {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Zoom Control */
+.zoom-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-label {
+  font-size: 14px;
+  color: #6b7280;
+  display: block;
+}
+
+.zoom-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-btn {
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.zoom-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoom-display {
+  flex: 1;
+  text-align: center;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Reset Button */
+.reset-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.reset-btn:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.reset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tips Box */
+.tips-box {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f9fafb;
+  border-radius: 4px;
+}
+
+.tips-heading {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tips-list li {
+  margin-top: 4px;
+}

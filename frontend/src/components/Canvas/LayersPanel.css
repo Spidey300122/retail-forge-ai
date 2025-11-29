@@ -1,0 +1,149 @@
+/* Layers Panel Container */
+.layers-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+/* Custom Scrollbar (Webkit browsers) */
+.layers-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.layers-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.layers-panel::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 3px;
+}
+
+.layers-panel::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Individual Layer Card */
+.layer-card {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  cursor: move; /* Show move cursor */
+  transition: all 0.2s;
+  background-color: white;
+  user-select: none; /* Prevent text selection while dragging */
+}
+
+.layer-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.layer-card.selected {
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.layer-card.dragging {
+  opacity: 0.5;
+  border-color: #2563eb;
+  border-style: dashed;
+}
+
+.layer-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Drag Handle */
+.layer-drag-handle {
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.layer-drag-handle:active {
+  cursor: grabbing;
+}
+
+.layer-card:hover .layer-drag-handle {
+  color: #6b7280;
+}
+
+.layer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.layer-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.layer-type {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 2px 0 0 0;
+}
+
+.layer-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.layer-btn {
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.layer-btn:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.layer-btn:active {
+  transform: scale(0.95); /* Visual feedback on click */
+}
+
+.layer-btn-delete {
+  color: #dc2626;
+}
+
+.layer-btn-delete:hover {
+  background-color: #fee2e2;
+}
+
+/* Empty State */
+.layers-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #6b7280;
+}
+
+.layers-empty-text {
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.6;
+}

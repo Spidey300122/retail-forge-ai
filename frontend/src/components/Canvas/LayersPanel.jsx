@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, GripVertical } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
+import './LayersPanel.css';
 
 function LayersPanel() {
-  const { canvas } = useCanvasStore();
+  const { canvas, saveState } = useCanvasStore();
   const [layers, setLayers] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [draggedLayer, setDraggedLayer] = useState(null);
 
-  // MOVE getLayerName BEFORE useEffect
   const getLayerName = (obj, index) => {
     if (obj.type === 'i-text' || obj.type === 'text') {
       return obj.text?.substring(0, 20) || `Text ${index + 1}`;
@@ -32,9 +33,9 @@ function LayersPanel() {
         visible: obj.visible !== false,
         locked: obj.selectable === false,
         object: obj,
+        index: index,
       })));
       
-      // Update selected layer
       if (activeObject) {
         const activeIndex = objects.indexOf(activeObject);
         setSelectedId(`layer-${activeIndex}`);
@@ -43,10 +44,8 @@ function LayersPanel() {
       }
     };
 
-    // Initial update
     updateLayers();
 
-    // Listen to all canvas events
     canvas.on('object:added', updateLayers);
     canvas.on('object:removed', updateLayers);
     canvas.on('object:modified', updateLayers);
@@ -73,60 +72,133 @@ function LayersPanel() {
 
   const handleToggleVisibility = (layer, e) => {
     e.stopPropagation();
-    layer.object.set('visible', !layer.visible);
+    e.preventDefault(); // Prevent any default behavior
+    
+    if (!canvas) return;
+    
+    const newVisible = !layer.visible;
+    layer.object.set('visible', newVisible);
     canvas.renderAll();
-    setLayers([...layers]);
+    
+    // Force immediate state update
+    setLayers(prevLayers => 
+      prevLayers.map(l => 
+        l.id === layer.id ? { ...l, visible: newVisible } : l
+      )
+    );
+    
+    console.log(`👁️ Layer ${layer.name} visibility: ${newVisible}`);
   };
 
   const handleToggleLock = (layer, e) => {
     e.stopPropagation();
+    e.preventDefault();
+    
+    if (!canvas) return;
+    
     const newLocked = !layer.locked;
     layer.object.set('selectable', !newLocked);
     layer.object.set('evented', !newLocked);
     canvas.renderAll();
-    setLayers([...layers]);
+    
+    // Force immediate state update
+    setLayers(prevLayers => 
+      prevLayers.map(l => 
+        l.id === layer.id ? { ...l, locked: newLocked } : l
+      )
+    );
+    
+    console.log(`🔒 Layer ${layer.name} locked: ${newLocked}`);
   };
 
   const handleDeleteLayer = (layer, e) => {
     e.stopPropagation();
+    e.preventDefault();
+    
     if (!canvas) return;
     canvas.remove(layer.object);
     canvas.renderAll();
+    saveState();
+    console.log(`🗑️ Deleted layer: ${layer.name}`);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, layer) => {
+    e.stopPropagation();
+    setDraggedLayer(layer);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, targetLayer) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!canvas || !draggedLayer || draggedLayer.id === targetLayer.id) {
+      setDraggedLayer(null);
+      return;
+    }
+
+    const objects = canvas.getObjects();
+    const fromIndex = draggedLayer.index;
+    const toIndex = targetLayer.index;
+
+    // Reorder objects in canvas
+    const movedObject = objects[fromIndex];
+    canvas.remove(movedObject);
+    canvas.insertAt(movedObject, toIndex);
+    canvas.renderAll();
+    saveState();
+
+    setDraggedLayer(null);
+    console.log(`📦 Moved layer from ${fromIndex} to ${toIndex}`);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedLayer(null);
   };
 
   return (
-    <div className="space-y-2">
+    <div className="layers-panel">
       {layers.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-4">
-          No layers yet. Add some content to the canvas.
-        </p>
+        <div className="layers-empty">
+          <p className="layers-empty-text">
+            No layers yet.<br />
+            Add content to the canvas.
+          </p>
+        </div>
       ) : (
         layers.map((layer) => (
           <div
             key={layer.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, layer)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, layer)}
+            onDragEnd={handleDragEnd}
             onClick={() => handleSelectLayer(layer)}
-            className={`
-              p-3 rounded border cursor-pointer transition-colors
-              ${selectedId === layer.id
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300'
-              }
-            `}
+            className={`layer-card ${selectedId === layer.id ? 'selected' : ''} ${draggedLayer?.id === layer.id ? 'dragging' : ''}`}
           >
-            <div className="flex items-center gap-2">
-              {/* Layer name */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {layer.name}
-                </p>
-                <p className="text-xs text-gray-500">{layer.type}</p>
+            <div className="layer-content">
+              {/* Drag handle */}
+              <div className="layer-drag-handle">
+                <GripVertical size={16} />
               </div>
 
-              {/* Controls */}
-              <div className="flex items-center gap-1">
+              <div className="layer-info">
+                <p className="layer-name">{layer.name}</p>
+                <p className="layer-type">{layer.type}</p>
+              </div>
+
+              <div className="layer-controls">
                 <button
                   onClick={(e) => handleToggleVisibility(layer, e)}
-                  className="p-1 hover:bg-gray-200 rounded"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="layer-btn"
                   title={layer.visible ? 'Hide' : 'Show'}
                 >
                   {layer.visible ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -134,7 +206,8 @@ function LayersPanel() {
 
                 <button
                   onClick={(e) => handleToggleLock(layer, e)}
-                  className="p-1 hover:bg-gray-200 rounded"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="layer-btn"
                   title={layer.locked ? 'Unlock' : 'Lock'}
                 >
                   {layer.locked ? <Lock size={16} /> : <Unlock size={16} />}
@@ -142,7 +215,8 @@ function LayersPanel() {
 
                 <button
                   onClick={(e) => handleDeleteLayer(layer, e)}
-                  className="p-1 hover:bg-red-100 text-red-600 rounded"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="layer-btn layer-btn-delete"
                   title="Delete"
                 >
                   <Trash2 size={16} />
