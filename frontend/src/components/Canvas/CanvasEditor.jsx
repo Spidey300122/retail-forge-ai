@@ -5,8 +5,10 @@ import CanvasToolbar from './CanvasToolbar';
 import CanvasControls from './CanvasControls';
 import Sidebar from '../UI/Sidebar';
 import useKeyboard from '../../hooks/useKeyboard';
+import { optimizeImageForCanvas } from '../../utils/imageOptimizer';
+import toast from 'react-hot-toast';
 import './canvas.css';
-import './CanvasEditor.css'; // New CSS file
+import './CanvasEditor.css';
 
 function CanvasEditor() {
   const canvasRef = useRef(null);
@@ -27,6 +29,9 @@ function CanvasEditor() {
       backgroundColor: '#ffffff',
       selection: true,
       preserveObjectStacking: true,
+      renderOnAddRemove: true,
+      enableRetinaScaling: true,
+      imageSmoothingEnabled: true,
     });
 
     fabric.Object.prototype.set({
@@ -36,6 +41,15 @@ function CanvasEditor() {
       cornerSize: 10,
       transparentCorners: false,
       borderScaleFactor: 2,
+    });
+
+    // Performance optimizations
+    fabricCanvas.on('object:moving', () => {
+      fabricCanvas.renderOnAddRemove = false;
+    });
+
+    fabricCanvas.on('object:modified', () => {
+      fabricCanvas.renderOnAddRemove = true;
     });
 
     fabricCanvasRef.current = fabricCanvas;
@@ -94,34 +108,43 @@ function CanvasEditor() {
     };
   }, [isReady, saveState]);
 
-  const handleAddToCanvas = (uploadData) => {
+  const handleAddToCanvas = async (uploadData) => {
     const canvas = fabricCanvasRef.current;
     if (!canvas || !uploadData.url) return;
 
-    fabric.Image.fromURL(uploadData.url, (img) => {
-      const maxSize = 800;
-      const scale = Math.min(
-        maxSize / img.width,
-        maxSize / img.height,
-        1
+    try {
+      console.log('📥 Adding image to canvas...');
+
+      const optimizedUrl = await optimizeImageForCanvas(uploadData.url, 2000);
+
+      fabric.Image.fromURL(
+        optimizedUrl,
+        (img) => {
+          const maxSize = 800;
+          const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+
+          img.set({
+            left: canvas.width / 2,
+            top: canvas.height / 2,
+            originX: 'center',
+            originY: 'center',
+            scaleX: scale,
+            scaleY: scale,
+          });
+
+          canvas.add(img);
+          canvas.setActiveObject(img);
+          canvas.renderAll();
+          saveState();
+
+          console.log('✅ Image added to canvas');
+        },
+        { crossOrigin: 'anonymous' }
       );
-
-      img.set({
-        left: canvas.width / 2,
-        top: canvas.height / 2,
-        originX: 'center',
-        originY: 'center',
-        scaleX: scale,
-        scaleY: scale,
-      });
-
-      canvas.add(img);
-      canvas.setActiveObject(img);
-      canvas.renderAll();
-      saveState();
-
-      console.log('✅ Image added to canvas');
-    }, { crossOrigin: 'anonymous' });
+    } catch (error) {
+      console.error('❌ Failed to add image:', error);
+      toast.error('Failed to add image to canvas');
+    }
   };
 
   const handleAddText = (textConfig) => {
@@ -154,7 +177,7 @@ function CanvasEditor() {
       {/* Toolbar */}
       <CanvasToolbar isReady={isReady} />
 
-      {/* Main content area */}
+      {/* Main Content */}
       <div className="canvas-editor-content">
         {/* Left Sidebar */}
         <Sidebar 
@@ -162,7 +185,7 @@ function CanvasEditor() {
           onAddText={handleAddText}
         />
 
-        {/* Canvas container */}
+        {/* Canvas Area */}
         <div ref={containerRef} className="canvas-editor-center">
           <div className="canvas-wrapper">
             <canvas ref={canvasRef} />
@@ -173,7 +196,7 @@ function CanvasEditor() {
         <CanvasControls isReady={isReady} />
       </div>
 
-      {/* Status bar */}
+      {/* Status Bar */}
       <div className="canvas-editor-status">
         <span>Canvas: 1080x1080px</span>
         <span className="separator">|</span>
@@ -183,4 +206,4 @@ function CanvasEditor() {
   );
 }
 
-export default CanvasEditor
+export default CanvasEditor;
