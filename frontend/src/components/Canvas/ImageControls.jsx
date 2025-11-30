@@ -36,13 +36,17 @@ function ImageControls() {
       if (active && active.type === 'image') {
         setSelectedObject(active);
         updateDimensions(active);
-      } else {
+      } else if (!isCropping) {
+        // FIX: Only clear selection if we are NOT currently cropping
         setSelectedObject(null);
         setDimensions({ width: 0, height: 0 });
       }
     };
 
     const handleDeselection = () => {
+      // FIX: Don't hide controls if deselection happened because CropTool locked the image
+      if (isCropping) return;
+      
       setSelectedObject(null);
       setDimensions({ width: 0, height: 0 });
     };
@@ -56,7 +60,7 @@ function ImageControls() {
       canvas.off('selection:updated', handleSelection);
       canvas.off('selection:cleared', handleDeselection);
     };
-  }, [canvas]);
+  }, [canvas, isCropping]); // FIX: Re-run effect when isCropping changes
 
   // Track dimension changes during scaling
   useEffect(() => {

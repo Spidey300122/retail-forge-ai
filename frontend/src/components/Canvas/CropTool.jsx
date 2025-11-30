@@ -8,34 +8,58 @@ function CropTool({ image, onComplete, onCancel }) {
   const { canvas } = useCanvasStore();
   const cropRectRef = useRef(null);
   const overlayRef = useRef(null);
+  const originalStateRef = useRef(null);
 
+  // Initialize Crop Tool
   useEffect(() => {
     if (!canvas || !image) return;
 
     console.log('🔪 Starting crop tool');
 
-    // Create crop rectangle
+    // 1. Save original state
+    originalStateRef.current = {
+      angle: image.angle,
+      flipX: image.flipX,
+      flipY: image.flipY,
+      left: image.left,
+      top: image.top,
+      scaleX: image.scaleX,
+      scaleY: image.scaleY,
+      selectable: image.selectable, // Save these specifically
+      evented: image.evented
+    };
+
+    // 2. Straighten and LOCK the image
+    image.set({
+      angle: 0,
+      flipX: false,
+      flipY: false,
+      selectable: false, // Lock it
+      evented: false     // Ignore clicks
+    });
+    image.setCoords();
+    
+    // Note: We do NOT call canvas.discardActiveObject() here, 
+    // because we want ImageControls to keep the reference.
+
+    // 3. Create crop rectangle
     const rect = new fabric.Rect({
       left: image.left - (image.width * image.scaleX) / 4,
       top: image.top - (image.height * image.scaleY) / 4,
       width: (image.width * image.scaleX) / 2,
       height: (image.height * image.scaleY) / 2,
-      fill: 'transparent',
+      fill: 'rgba(0,0,0,0)', 
       stroke: '#2563eb',
       strokeWidth: 2,
       strokeDashArray: [5, 5],
       cornerColor: '#2563eb',
-      cornerSize: 10,
+      cornerSize: 12,
       transparentCorners: false,
       lockRotation: true,
+      hasRotatingPoint: false,
     });
 
-    canvas.add(rect);
-    canvas.setActiveObject(rect);
-    canvas.renderAll();
-    cropRectRef.current = rect;
-
-    // Create overlay to dim the rest
+    // 4. Create overlay
     const overlayRect = new fabric.Rect({
       left: 0,
       top: 0,
@@ -45,20 +69,40 @@ function CropTool({ image, onComplete, onCancel }) {
       selectable: false,
       evented: false,
     });
+
     canvas.add(overlayRect);
+    canvas.add(rect);
+    
+    // Ordering: Background -> Overlay -> Image -> CropBox
     canvas.sendToBack(overlayRect);
+    image.bringToFront();
+    rect.bringToFront();
+
+    canvas.setActiveObject(rect);
+    canvas.renderAll();
+    
+    cropRectRef.current = rect;
     overlayRef.current = overlayRect;
 
-    console.log('✅ Crop tool initialized');
-
+    // Cleanup function - THIS RESTORES YOUR DRAGGING ABILITY
     return () => {
-      if (cropRectRef.current) {
-        canvas.remove(cropRectRef.current);
-        console.log('🗑️ Removed crop rectangle');
-      }
-      if (overlayRef.current) {
-        canvas.remove(overlayRef.current);
-        console.log('🗑️ Removed overlay');
+      if (cropRectRef.current) canvas.remove(cropRectRef.current);
+      if (overlayRef.current) canvas.remove(overlayRef.current);
+
+      // Restore image state immediately on unmount
+      if (image && originalStateRef.current) {
+        const og = originalStateRef.current;
+        image.set({
+          angle: og.angle,
+          flipX: og.flipX,
+          flipY: og.flipY,
+          selectable: true, // <--- IMPORTANT: Re-enable selection
+          evented: true     // <--- IMPORTANT: Re-enable events
+        });
+        image.setCoords();
+        
+        // Re-select the image so blue box comes back
+        canvas.setActiveObject(image);
       }
       canvas.renderAll();
     };
@@ -68,15 +112,12 @@ function CropTool({ image, onComplete, onCancel }) {
     const cropRect = cropRectRef.current;
     if (!cropRect || !image) return;
 
-    console.log('🔪 Starting crop operation');
-
-    // Get crop dimensions
+    // 1. Calculate relative coordinates
     const cropLeft = cropRect.left;
     const cropTop = cropRect.top;
     const cropWidth = cropRect.width * cropRect.scaleX;
     const cropHeight = cropRect.height * cropRect.scaleY;
 
-    // Calculate relative position to image
     const imgLeft = image.left - (image.width * image.scaleX) / 2;
     const imgTop = image.top - (image.height * image.scaleY) / 2;
 
@@ -85,90 +126,66 @@ function CropTool({ image, onComplete, onCancel }) {
     const relativeWidth = cropWidth / image.scaleX;
     const relativeHeight = cropHeight / image.scaleY;
 
-    console.log('📐 Crop dimensions:', {
-      relativeLeft,
-      relativeTop,
-      relativeWidth,
-      relativeHeight,
-    });
+    // 2. Crop logic
+    const sourceImage = new Image();
+    sourceImage.crossOrigin = 'anonymous';
+    sourceImage.src = image.getSrc();
 
-    // Create cropped image
-    const croppedImage = new Image();
-    croppedImage.crossOrigin = 'anonymous';
-    croppedImage.src = image.getSrc();
-
-    croppedImage.onload = () => {
+    sourceImage.onload = () => {
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = relativeWidth;
       tempCanvas.height = relativeHeight;
       const ctx = tempCanvas.getContext('2d');
 
-      // Draw cropped portion
       ctx.drawImage(
-        croppedImage,
-        relativeLeft,
-        relativeTop,
-        relativeWidth,
-        relativeHeight,
-        0,
-        0,
-        relativeWidth,
-        relativeHeight
+        sourceImage,
+        relativeLeft, relativeTop, relativeWidth, relativeHeight,
+        0, 0, relativeWidth, relativeHeight
       );
 
-      // Create new fabric image from cropped data
       fabric.Image.fromURL(tempCanvas.toDataURL(), (newImg) => {
+        const og = originalStateRef.current;
+        
         newImg.set({
-          left: cropLeft + cropWidth / 2,
-          top: cropTop + cropHeight / 2,
+          left: cropRect.left + (cropRect.width * cropRect.scaleX) / 2,
+          top: cropRect.top + (cropRect.height * cropRect.scaleY) / 2,
           originX: 'center',
           originY: 'center',
           scaleX: image.scaleX,
           scaleY: image.scaleY,
+          angle: og.angle,
+          flipX: og.flipX,
+          flipY: og.flipY,
         });
 
-        // Remove old image and overlay
+        // The useEffect cleanup will handle removing the old UI
+        // We just need to remove the old image and add the new one
+        
+        // Prevent useEffect from restoring old image properties
+        originalStateRef.current = null; 
+        
         canvas.remove(image);
-        if (overlayRef.current) canvas.remove(overlayRef.current);
-        if (cropRectRef.current) canvas.remove(cropRectRef.current);
-
-        // Add new cropped image
         canvas.add(newImg);
         canvas.setActiveObject(newImg);
-        canvas.renderAll();
-
-        console.log('✅ Crop complete');
         onComplete(newImg);
       });
-    };
-
-    croppedImage.onerror = (error) => {
-      console.error('❌ Crop failed:', error);
-      onCancel();
     };
   };
 
   const handleCancel = () => {
-    console.log('❌ Crop cancelled');
-    if (cropRectRef.current) canvas.remove(cropRectRef.current);
-    if (overlayRef.current) canvas.remove(overlayRef.current);
-    canvas.renderAll();
+    // The useEffect return function handles the restoration
     onCancel();
   };
 
   return (
     <div className="crop-tool-overlay">
-      <p className="crop-tool-message">
-        Adjust the crop area, then click confirm
-      </p>
+      <p className="crop-tool-message">Adjust crop area</p>
       <div className="crop-tool-buttons">
         <button onClick={handleCrop} className="crop-confirm-btn">
-          <Check size={18} />
-          Confirm Crop
+          <Check size={18} /> Confirm
         </button>
         <button onClick={handleCancel} className="crop-cancel-btn">
-          <X size={18} />
-          Cancel
+          <X size={18} /> Cancel
         </button>
       </div>
     </div>
