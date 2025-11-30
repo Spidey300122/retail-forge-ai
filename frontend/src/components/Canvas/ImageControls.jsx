@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   RotateCw, FlipHorizontal, FlipVertical, Scissors, Loader, 
-  Maximize2, Crop, Move, ArrowLeftRight
+  Maximize2, Crop, Move, ArrowLeftRight, Palette
 } from 'lucide-react';
 import { fabric } from 'fabric';
 import useCanvasStore from '../../store/canvasStore';
@@ -17,6 +17,8 @@ function ImageControls() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isCropping, setIsCropping] = useState(false);
   const [customRotation, setCustomRotation] = useState('');
+  const [extractedColors, setExtractedColors] = useState([]);
+  const [isExtractingColors, setIsExtractingColors] = useState(false);
 
   // Helper function to update dimensions
   const updateDimensions = (obj) => {
@@ -37,14 +39,12 @@ function ImageControls() {
         setSelectedObject(active);
         updateDimensions(active);
       } else if (!isCropping) {
-        // FIX: Only clear selection if we are NOT currently cropping
         setSelectedObject(null);
         setDimensions({ width: 0, height: 0 });
       }
     };
 
     const handleDeselection = () => {
-      // FIX: Don't hide controls if deselection happened because CropTool locked the image
       if (isCropping) return;
       
       setSelectedObject(null);
@@ -60,7 +60,7 @@ function ImageControls() {
       canvas.off('selection:updated', handleSelection);
       canvas.off('selection:cleared', handleDeselection);
     };
-  }, [canvas, isCropping]); // FIX: Re-run effect when isCropping changes
+  }, [canvas, isCropping]);
 
   // Track dimension changes during scaling
   useEffect(() => {
@@ -261,6 +261,66 @@ function ImageControls() {
     setIsCropping(false);
   };
 
+  // COLOR EXTRACTION
+  const handleExtractColors = async () => {
+    if (!selectedObject || !selectedObject.getSrc) return;
+
+    setIsExtractingColors(true);
+    const loadingToast = toast.loading('Extracting colors...');
+
+    try {
+      const imageSrc = selectedObject.getSrc();
+      const response = await fetch(imageSrc);
+      if (!response.ok) throw new Error('Failed to fetch image');
+      
+      const blob = await response.blob();
+      
+      const formData = new FormData();
+      formData.append('file', blob, 'image.jpg');
+      formData.append('count', 5);
+
+      const result = await fetch('http://localhost:8000/process/extract-colors', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await result.json();
+
+      if (data.success) {
+        setExtractedColors(data.colors);
+        
+        // Save to localStorage for Sidebar
+        localStorage.setItem('extracted_colors', JSON.stringify(data.colors));
+        
+        // Save to database
+        try {
+          await fetch('http://localhost:3000/api/color/palette', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: 1, // TODO: Replace with actual user ID
+              imageId: selectedObject.id || 'temp',
+              colors: data.colors
+            })
+          });
+          console.log('💾 Palette saved to database');
+        } catch (dbError) {
+          console.warn('Failed to save palette to DB:', dbError);
+        }
+        
+        toast.success(`✨ Extracted ${data.colors.length} colors!`, { id: loadingToast });
+        console.log('🎨 Colors extracted:', data.colors);
+      } else {
+        throw new Error(data.error || 'Failed to extract colors');
+      }
+    } catch (error) {
+      console.error('Color extraction failed:', error);
+      toast.error('Failed to extract colors', { id: loadingToast });
+    } finally {
+      setIsExtractingColors(false);
+    }
+  };
+
   // BACKGROUND REMOVAL
   const handleRemoveBackground = async () => {
     if (!selectedObject || !selectedObject.getSrc) return;
@@ -372,6 +432,12 @@ function ImageControls() {
     }
   };
 
+  // Copy color to clipboard
+  const handleColorClick = (color) => {
+    navigator.clipboard.writeText(color.hex);
+    toast.success(`Copied ${color.hex} to clipboard`);
+  };
+
   if (!selectedObject) {
     return (
       <div className="no-selection">
@@ -469,7 +535,6 @@ function ImageControls() {
           Rotate 180°
         </button>
         
-        {/* Custom rotation */}
         <div className="flex gap-2 mt-2">
           <input
             type="number"
@@ -534,6 +599,81 @@ function ImageControls() {
           <Crop size={16} />
           {isCropping ? 'Cropping...' : 'Crop Image'}
         </button>
+      </div>
+
+      {/* COLOR EXTRACTION */}
+      <div className="control-section">
+        <label className="control-section-label">
+          <Palette size={14} className="inline mr-1" />
+          Brand Colors
+        </label>
+        <button 
+          onClick={handleExtractColors} 
+          disabled={isExtractingColors} 
+          className="control-btn control-btn-full"
+          style={{ 
+            backgroundColor: isExtractingColors ? '#9ca3af' : '#8b5cf6',
+            color: 'white'
+          }}
+        >
+          {isExtractingColors ? (
+            <>
+              <Loader size={16} className="animate-spin" />
+              Extracting...
+            </>
+          ) : (
+            <>
+              <Palette size={16} />
+              Extract Colors
+            </>
+          )}
+        </button>
+        
+        {extractedColors.length > 0 && (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(5, 1fr)', 
+              gap: '8px' 
+            }}>
+              {extractedColors.map((color, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleColorClick(color)}
+                  style={{
+                    width: '100%',
+                    height: '40px',
+                    backgroundColor: color.hex,
+                    borderRadius: '4px',
+                    border: '1px solid #e5e7eb',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    padding: '4px',
+                    transition: 'transform 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  title={`${color.name} - ${color.hex} - Click to copy`}
+                >
+                  <span style={{
+                    fontSize: '10px',
+                    color: color.brightness > 128 ? '#000' : '#fff',
+                    fontWeight: '600',
+                    textShadow: color.brightness > 128 
+                      ? '0 1px 2px rgba(255,255,255,0.8)' 
+                      : '0 1px 2px rgba(0,0,0,0.8)'
+                  }}>
+                    {color.hex}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="bg-remove-note">
+              Click a color to copy to clipboard
+            </p>
+          </div>
+        )}
       </div>
 
       {/* BACKGROUND REMOVAL */}

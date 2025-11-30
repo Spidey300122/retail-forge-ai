@@ -1,19 +1,44 @@
-import { useState } from 'react';
-import { Upload as UploadIcon, Image as ImageIcon, Type, Layers } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Upload as UploadIcon, Image as ImageIcon, Type, Layers, Palette } from 'lucide-react';
 import ImageUpload from '../Upload/ImageUpload';
 import ImageLibrary from '../Upload/ImageLibrary';
 import LayersPanel from '../Canvas/LayersPanel';
+import BackgroundColorPicker from '../Canvas/BackgroundColorPicker';
 import './Sidebar.css';
 
 function Sidebar({ onAddToCanvas, onAddText }) {
   const [activeTab, setActiveTab] = useState('upload');
+  const [extractedColors, setExtractedColors] = useState([]);
 
   const tabs = [
     { id: 'upload', label: 'Upload', icon: UploadIcon },
     { id: 'images', label: 'Images', icon: ImageIcon },
     { id: 'text', label: 'Text', icon: Type },
+    { id: 'colors', label: 'Colors', icon: Palette },
     { id: 'layers', label: 'Layers', icon: Layers },
   ];
+
+  // Load extracted colors from localStorage
+  useEffect(() => {
+    const loadColors = () => {
+      try {
+        const stored = localStorage.getItem('extracted_colors');
+        if (stored) {
+          const colors = JSON.parse(stored);
+          setExtractedColors(colors);
+          console.log('🎨 Sidebar: Loaded', colors.length, 'colors');
+        }
+      } catch (error) {
+        console.error('Failed to load colors:', error);
+      }
+    };
+
+    loadColors();
+
+    // Poll for updates every 2 seconds
+    const interval = setInterval(loadColors, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleUploadComplete = (uploadData) => {
     console.log('Upload complete:', uploadData);
@@ -81,6 +106,13 @@ function Sidebar({ onAddToCanvas, onAddText }) {
               <div className="text-btn-title">Add Body Text</div>
               <div className="text-btn-subtitle">Regular paragraph text</div>
             </button>
+          </div>
+        )}
+
+        {activeTab === 'colors' && (
+          <div>
+            <h3 className="sidebar-heading">Colors</h3>
+            <BackgroundColorPicker extractedColors={extractedColors} />
           </div>
         )}
 

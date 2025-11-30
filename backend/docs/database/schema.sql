@@ -115,6 +115,18 @@ CREATE TABLE creative_history (
 CREATE INDEX idx_history_user ON creative_history(user_id);
 CREATE INDEX idx_history_brand ON creative_history(brand_profile_id);
 
+-- Color palettes extracted from images
+CREATE TABLE color_palettes (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    image_id VARCHAR(255),
+    colors JSONB NOT NULL,  -- [{"hex": "#FF5733", "name": "Red", "usage": "primary"}]
+    extracted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_palettes_user ON color_palettes(user_id);
+CREATE INDEX idx_palettes_extracted ON color_palettes(extracted_at DESC);
+
 -- AI interaction logs (for debugging/analytics)
 CREATE TABLE ai_logs (
     id SERIAL PRIMARY KEY,

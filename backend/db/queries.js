@@ -131,3 +131,41 @@ export async function logAIInteraction(logData) {
   ]);
   return result.rows[0];
 }
+
+// Color Palettes
+export async function saveColorPalette(userId, imageId, colors) {
+  const query = `
+    INSERT INTO color_palettes (user_id, image_id, colors, extracted_at)
+    VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    userId,
+    imageId,
+    JSON.stringify(colors)
+  ]);
+  return result.rows[0];
+}
+
+export async function getColorPalettesByUser(userId, limit = 10) {
+  const query = `
+    SELECT * FROM color_palettes 
+    WHERE user_id = $1 
+    ORDER BY extracted_at DESC 
+    LIMIT $2
+  `;
+  const result = await pool.query(query, [userId, limit]);
+  return result.rows;
+}
+
+export async function getRecentColors(userId, limit = 20) {
+  const query = `
+    SELECT DISTINCT jsonb_array_elements(colors) as color
+    FROM color_palettes
+    WHERE user_id = $1
+    ORDER BY extracted_at DESC
+    LIMIT $2
+  `;
+  const result = await pool.query(query, [userId, limit]);
+  return result.rows.map(row => row.color);
+}
