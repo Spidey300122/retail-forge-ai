@@ -159,13 +159,38 @@ export async function getColorPalettesByUser(userId, limit = 10) {
 }
 
 export async function getRecentColors(userId, limit = 20) {
+  // Fixed query - get colors from most recent palettes
   const query = `
-    SELECT DISTINCT jsonb_array_elements(colors) as color
-    FROM color_palettes
-    WHERE user_id = $1
-    ORDER BY extracted_at DESC
+    SELECT DISTINCT ON (color->>'hex') 
+      color,
+      cp.extracted_at
+    FROM color_palettes cp,
+    jsonb_array_elements(cp.colors) as color
+    WHERE cp.user_id = $1
+    ORDER BY color->>'hex', cp.extracted_at DESC
     LIMIT $2
   `;
+  
+  try {
+    const result = await pool.query(query, [userId, limit]);
+    
+    // Parse the color objects from JSONB
+    const colors = result.rows.map(row => {
+      try {
+        return typeof row.color === 'string' ? JSON.parse(row.color) : row.color;
+      } catch (e) {
+        console.error('Failed to parse color:', row.color);
+        return null;
+      }
+    }).filter(color => color !== null);
+    
+    console.log('✅ Successfully fetched', colors.length, 'recent colors');
+    return colors;
+  } catch (error) {
+    console.error('Error fetching recent colors:', error);
+    throw error;
+  }
+
   const result = await pool.query(query, [userId, limit]);
   return result.rows.map(row => row.color);
 }

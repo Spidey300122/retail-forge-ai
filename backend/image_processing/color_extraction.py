@@ -147,18 +147,19 @@ def extract_colors(image_path, n_colors=5):
         labels = kmeans.labels_
         label_counts = Counter(labels)
         
-        # Build color data with frequency
+        # Build color data with frequency - CONVERT NUMPY TYPES TO PYTHON TYPES
         colors_with_freq = []
         for i, color in enumerate(colors):
             frequency = label_counts[i]
-            rgb = tuple(color)
+            # Convert numpy.int64 to Python int, and numpy.ndarray to list of Python ints
+            rgb = [int(c) for c in color]
             
             colors_with_freq.append({
                 'hex': rgb_to_hex(rgb),
-                'rgb': list(rgb),
-                'frequency': int(frequency),
+                'rgb': rgb,  # Now a list of Python ints
+                'frequency': int(frequency),  # Convert numpy.int64 to Python int
                 'name': get_color_name(rgb),
-                'brightness': round(get_color_brightness(rgb), 2)
+                'brightness': round(float(get_color_brightness(rgb)), 2)  # Convert to Python float
             })
         
         # Determine usage for each color
@@ -174,7 +175,7 @@ def extract_colors(image_path, n_colors=5):
         return {
             "success": True,
             "colors": colors_with_usage[:n_colors],
-            "total_pixels": int(len(pixels))
+            "total_pixels": int(len(pixels))  # Convert to Python int
         }
         
     except Exception as e:
