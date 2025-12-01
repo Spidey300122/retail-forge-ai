@@ -7,6 +7,17 @@ const openai = new OpenAI({
   apiKey: config.ai.openai
 });
 
+// Helper to strip markdown code blocks if present
+function cleanJsonString(text) {
+  if (!text) return null;
+  // Remove ```json ... ``` wrappers
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (match && match[1]) {
+    return match[1];
+  }
+  return text;
+}
+
 /**
  * Suggest layouts using GPT-4 Vision
  */
@@ -25,7 +36,8 @@ export async function suggestLayouts(productImageUrl, category, style = 'modern'
     
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      response_format: { type: "json_object" },
+      // REMOVED: response_format: { type: "json_object" } 
+      // strict mode often causes empty responses with Vision inputs
       messages: [
         {
           role: "user",
@@ -39,7 +51,7 @@ For each layout, provide:
 2. Brief rationale (why it works for this product)
 3. Element positioning (product, headline, logo, value tile if applicable)
 
-CRITICAL: Return ONLY valid JSON in this exact structure:
+IMPORTANT: Return ONLY valid JSON. Do not include markdown formatting or introductory text. Use this exact structure:
 {
   "layouts": [
     {
@@ -71,18 +83,37 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
       temperature: 0.7
     });
     
-    const rawText = response.choices[0].message.content;
-    let suggestions;
+    const choice = response.choices[0];
     
+    // Check for safety refusals
+    if (choice.message.refusal) {
+        logger.warn('AI refused request', { refusal: choice.message.refusal });
+        throw new Error(`AI Refusal: ${choice.message.refusal}`);
+    }
+
+    let rawText = choice.message.content;
+    const finishReason = choice.finish_reason;
+
+    if (!rawText) {
+        // Use warn for data logging to avoid logger.error schema issues
+        logger.warn('AI returned empty content', { finishReason });
+        throw new Error(`AI returned empty response (Reason: ${finishReason})`);
+    }
+
+    // Clean potential markdown wrappers
+    rawText = cleanJsonString(rawText);
+    
+    let suggestions;
     try {
       suggestions = JSON.parse(rawText);
     } catch (parseError) {
-      logger.error('Failed to parse GPT-4 response', { rawText });
+      logger.warn('Failed to parse GPT-4 response', { rawText });
       throw new Error('Invalid JSON response from AI');
     }
     
-    // Validate structure
-    if (!suggestions.layouts || !Array.isArray(suggestions.layouts)) {
+    // Robust validation
+    if (!suggestions || !suggestions.layouts || !Array.isArray(suggestions.layouts)) {
+      logger.warn('Invalid layout response structure', { parsed: suggestions });
       throw new Error('Invalid layout response structure');
     }
     
@@ -93,6 +124,7 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
     
     return suggestions;
   } catch (error) {
+    // Pass error object correctly to logger.error
     logger.error('Failed to generate layout suggestions', error);
     throw error;
   }
