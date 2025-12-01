@@ -7,40 +7,24 @@ import './LayoutSuggestions.css';
 
 function LayoutSuggestions() {
   const { canvas } = useCanvasStore();
-
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(1); // STEP 8 STATE
   const [suggestions, setSuggestions] = useState([]);
   const [selectedLayout, setSelectedLayout] = useState(null);
-
-  // Form State
+  
+  // Form state
   const [category, setCategory] = useState('beverages');
   const [style, setStyle] = useState('modern');
   const [productImageUrl, setProductImageUrl] = useState('');
 
   const categories = [
-    'beverages', 'food', 'beauty', 'electronics',
+    'beverages', 'food', 'beauty', 'electronics', 
     'fashion', 'home', 'sports', 'toys'
   ];
 
   const styles = [
-    'modern', 'minimal', 'vibrant', 'elegant',
+    'modern', 'minimal', 'vibrant', 'elegant', 
     'playful', 'professional', 'bold', 'clean'
   ];
-
-  // STEP 7 — Enhanced Error Handling Helper
-  const getErrorMessage = (error) => {
-    if (error.message.includes('API key')) {
-      return 'OpenAI API key not configured. Check backend .env file.';
-    }
-    if (error.message.includes('rate limit')) {
-      return 'API rate limit reached. Please wait a moment.';
-    }
-    if (error.message.includes('timeout')) {
-      return 'Request timed out. Try again.';
-    }
-    return error.message || 'Failed to generate layouts';
-  };
 
   const handleGenerate = async () => {
     if (!productImageUrl) {
@@ -49,12 +33,6 @@ function LayoutSuggestions() {
     }
 
     setIsLoading(true);
-
-    // STEP 8 — Loading phases
-    setLoadingStep(1);
-    setTimeout(() => setLoadingStep(2), 2000);
-    setTimeout(() => setLoadingStep(3), 5000);
-
     const loadingToast = toast.loading('🎨 AI is analyzing your product...');
 
     try {
@@ -73,16 +51,15 @@ function LayoutSuggestions() {
 
       if (data.success) {
         setSuggestions(data.data.suggestions.layouts || []);
-        toast.success(
-          `✨ Generated ${data.data.suggestions.layouts.length} layouts!`,
-          { id: loadingToast }
-        );
+        toast.success(`✨ Generated ${data.data.suggestions.layouts.length} layouts!`, {
+          id: loadingToast
+        });
       } else {
         throw new Error(data.error?.message || 'Failed to generate layouts');
       }
     } catch (error) {
       console.error('Layout generation failed:', error);
-      toast.error(getErrorMessage(error), { id: loadingToast });
+      toast.error('Failed to generate layouts', { id: loadingToast });
     } finally {
       setIsLoading(false);
     }
@@ -95,12 +72,14 @@ function LayoutSuggestions() {
     }
 
     try {
+      // Clear canvas
       canvas.clear();
       canvas.backgroundColor = '#ffffff';
 
+      // Apply layout elements
       const elements = layout.elements;
 
-      // Product Image
+      // Add product image placeholder
       if (elements.product && productImageUrl) {
         fabric.Image.fromURL(productImageUrl, (img) => {
           img.set({
@@ -116,7 +95,7 @@ function LayoutSuggestions() {
         }, { crossOrigin: 'anonymous' });
       }
 
-      // Headline Text
+      // Add headline text
       if (elements.headline) {
         const headline = new fabric.IText('Your Headline Here', {
           left: elements.headline.x,
@@ -130,7 +109,7 @@ function LayoutSuggestions() {
         canvas.add(headline);
       }
 
-      // Logo Placeholder
+      // Add logo placeholder
       if (elements.logo) {
         const logoRect = new fabric.Rect({
           left: elements.logo.x,
@@ -143,7 +122,7 @@ function LayoutSuggestions() {
           rx: 8,
           ry: 8
         });
-
+        
         const logoText = new fabric.Text('Logo', {
           left: elements.logo.x + elements.logo.width / 2,
           top: elements.logo.y + elements.logo.height / 2,
@@ -197,7 +176,7 @@ function LayoutSuggestions() {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
-            {categories.map((cat) => (
+            {categories.map(cat => (
               <option key={cat} value={cat}>
                 {cat.charAt(0).toUpperCase() + cat.slice(1)}
               </option>
@@ -212,7 +191,7 @@ function LayoutSuggestions() {
             value={style}
             onChange={(e) => setStyle(e.target.value)}
           >
-            {styles.map((s) => (
+            {styles.map(s => (
               <option key={s} value={s}>
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </option>
@@ -239,15 +218,11 @@ function LayoutSuggestions() {
         </button>
       </div>
 
-      {/* STEP 8 — Enhanced Loading State */}
+      {/* Loading State */}
       {isLoading && (
         <div className="suggestions-loading">
           <div className="loading-spinner" />
-          <p className="loading-text">
-            {loadingStep === 1 && '📸 Analyzing product image...'}
-            {loadingStep === 2 && '🎨 Generating creative layouts...'}
-            {loadingStep === 3 && '✨ Almost done...'}
-          </p>
+          <p className="loading-text">AI is analyzing your product...</p>
         </div>
       )}
 
@@ -257,14 +232,11 @@ function LayoutSuggestions() {
           {suggestions.map((layout, index) => (
             <div
               key={index}
-              className={`layout-card ${
-                selectedLayout === layout ? 'selected' : ''
-              }`}
+              className={`layout-card ${selectedLayout === layout ? 'selected' : ''}`}
               onClick={() => setSelectedLayout(layout)}
             >
               <div className="layout-header">
                 <h4 className="layout-name">{layout.name}</h4>
-
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -275,9 +247,7 @@ function LayoutSuggestions() {
                   Apply
                 </button>
               </div>
-
               <p className="layout-description">{layout.description}</p>
-
               <div className="layout-rationale">
                 💡 {layout.rationale}
               </div>
@@ -291,8 +261,8 @@ function LayoutSuggestions() {
         <div className="suggestions-empty">
           <Sparkles size={48} className="empty-icon" />
           <p className="empty-text">
-            Enter a product image URL and click <br />
-            <b>\"Generate Layouts\"</b> to get AI suggestions.
+            Enter a product image URL and click<br />
+            "Generate Layouts" to get AI suggestions
           </p>
         </div>
       )}

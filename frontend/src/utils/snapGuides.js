@@ -1,3 +1,5 @@
+import { fabric } from 'fabric';
+
 /**
  * Add snapping guides to canvas
  */
