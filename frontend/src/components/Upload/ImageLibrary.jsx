@@ -5,14 +5,12 @@ import './ImageLibrary.css';
 function ImageLibrary({ onSelectImage }) {
   const [images, setImages] = useState([]);
 
-  // Load images from localStorage
   useEffect(() => {
     console.log('🎬 ImageLibrary mounted');
     
     const loadImages = () => {
       try {
         const stored = localStorage.getItem('uploaded_images');
-        console.log('🔍 ImageLibrary: Loading from localStorage');
         
         if (stored) {
           const parsed = JSON.parse(stored);
@@ -28,15 +26,25 @@ function ImageLibrary({ onSelectImage }) {
       }
     };
 
+    // Load immediately
     loadImages();
 
-    // Poll for updates every 3 seconds
-    const interval = setInterval(() => {
-      loadImages();
-    }, 3000);
+    // Listen for storage changes from other tabs/windows
+    const handleStorageChange = (e) => {
+      if (e.key === 'uploaded_images') {
+        console.log('🔄 Storage changed, reloading images');
+        loadImages();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Optional: Poll every 5 seconds as backup (reduced from 3s)
+    const interval = setInterval(loadImages, 5000);
 
     return () => {
       console.log('👋 ImageLibrary unmounting');
+      window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
   }, []);
@@ -103,12 +111,10 @@ function ImageLibrary({ onSelectImage }) {
                 }}
               />
 
-              {/* Filename overlay */}
               <div className="image-filename">
                 {image.filename || image.imageId}
               </div>
 
-              {/* Hover controls */}
               <div className="image-overlay">
                 <button
                   onClick={(e) => {

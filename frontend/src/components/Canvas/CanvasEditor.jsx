@@ -9,6 +9,7 @@ import { optimizeImageForCanvas } from '../../utils/imageOptimizer';
 import toast from 'react-hot-toast';
 import './canvas.css';
 import './CanvasEditor.css';
+import { enableSnapping } from '../../utils/snapGuides';
 
 function CanvasEditor() {
   const canvasRef = useRef(null);
@@ -16,6 +17,7 @@ function CanvasEditor() {
   const fabricCanvasRef = useRef(null);
   const { setCanvas, saveState } = useCanvasStore();
   const [isReady, setIsReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // <-- ADDED
 
   // Enable keyboard shortcuts
   useKeyboard();
@@ -54,12 +56,14 @@ function CanvasEditor() {
 
     fabricCanvasRef.current = fabricCanvas;
     window.__canvas__ = fabricCanvas;
+    enableSnapping(fabricCanvas, 10);
 
     console.log('✅ Canvas initialized');
 
     setTimeout(() => {
       setCanvas(fabricCanvas);
       setIsReady(true);
+      setIsLoading(false); // <-- ADDED
     }, 0);
 
     return () => {
@@ -174,11 +178,45 @@ function CanvasEditor() {
 
   return (
     <div className="canvas-editor-root">
+
+      {/* LOADING OVERLAY ADDED */}
+      {isLoading && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '32px',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <div className="animate-spin" style={{
+              width: '48px',
+              height: '48px',
+              border: '4px solid #e5e7eb',
+              borderTopColor: '#2563eb',
+              borderRadius: '50%',
+              margin: '0 auto 16px'
+            }} />
+            <p style={{ fontSize: '14px', color: '#6b7280' }}>
+              Initializing Canvas...
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <CanvasToolbar isReady={isReady} />
 
       {/* Main Content */}
       <div className="canvas-editor-content">
+
         {/* Left Sidebar */}
         <Sidebar 
           onAddToCanvas={handleAddToCanvas}

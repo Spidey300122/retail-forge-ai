@@ -4,12 +4,11 @@ import toast from 'react-hot-toast';
 import useCanvasStore from '../../store/canvasStore';
 
 function BackgroundColorPicker({ extractedColors = [] }) {
-  const { canvas: _canvas } = useCanvasStore();
-  
+  // Don't destructure canvas from the hook - get it directly when needed
   const [selectedColor, setSelectedColor] = useState('#ffffff');
   const [recentColors, setRecentColors] = useState([]);
 
-  // Load recent colors from backend
+  // Load recent colors ONCE on mount + listen for updates
   useEffect(() => {
     const loadRecentColors = async () => {
       try {
@@ -23,8 +22,21 @@ function BackgroundColorPicker({ extractedColors = [] }) {
         console.warn('Failed to load recent colors:', error);
       }
     };
+
+    // Load on mount
     loadRecentColors();
-  }, [extractedColors]); 
+
+    // Listen for color extraction events
+    const handleColorsExtracted = () => {
+      loadRecentColors();
+    };
+
+    window.addEventListener('colorsExtracted', handleColorsExtracted);
+
+    return () => {
+      window.removeEventListener('colorsExtracted', handleColorsExtracted);
+    };
+  }, []); // Only run once on mount
 
   const defaultColors = [
     { name: 'White', hex: '#ffffff' },
@@ -37,26 +49,20 @@ function BackgroundColorPicker({ extractedColors = [] }) {
     { name: 'Yellow', hex: '#fbbf24' },
   ];
 
-  // Ensure quickColors is always an array
   const quickColors = Array.isArray(extractedColors) && extractedColors.length > 0
     ? extractedColors
     : defaultColors;
 
   const handleColorChange = (e) => {
     const newValue = e.target.value.toUpperCase();
-    if (newValue.match(/^#?([0-9A-F]{1,6})$/i) || newValue === '') {
-        setSelectedColor(newValue.startsWith('#') ? newValue : `#${newValue}`);
-    } else if (newValue.length > 7) {
-        setSelectedColor(newValue.substring(0, 7));
-    } else {
-        setSelectedColor(newValue);
+    if (newValue.match(/^#?([0-9A-F]{0,6})$/i)) {
+      setSelectedColor(newValue.startsWith('#') ? newValue : `#${newValue}`);
     }
   };
 
   const handleQuickColorSelect = (color) => {
     if (color && color.hex) {
-        setSelectedColor(color.hex);
-        // Removed handleApplyColor(color.hex) to prevent auto-applying background
+      setSelectedColor(color.hex);
     }
   };
 
@@ -70,13 +76,13 @@ function BackgroundColorPicker({ extractedColors = [] }) {
     }
 
     if (!finalColor.match(/^#([0-9A-F]{6})$/i)) {
-        toast.error("Invalid hex color code.");
-        return;
+      toast.error("Invalid hex color code.");
+      return;
     }
     
     canvasInstance.backgroundColor = finalColor;
     canvasInstance.renderAll();
-    canvasInstance.fire('object:modified'); // Notify listeners
+    canvasInstance.fire('object:modified');
     
     toast.success(`Background changed to ${finalColor}`);
   };
@@ -107,42 +113,40 @@ function BackgroundColorPicker({ extractedColors = [] }) {
     toast.success(`Text color changed to ${selectedColor}`);
   };
 
-  // Helper to render color grids
   const renderColorSwatches = (colors) => {
-    if (!colors || colors.length === 0) return <div className="text-gray-400 text-xs italic">No colors available</div>;
+    if (!colors || colors.length === 0) {
+      return <div className="text-gray-400 text-xs italic">No colors available</div>;
+    }
 
     return (
-        // Added explicit style minHeight to ensure visibility even if Tailwind classes fail
-        <div className="grid grid-cols-5 gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200" style={{ minHeight: '60px' }}>
+      <div className="grid grid-cols-5 gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200" style={{ minHeight: '60px' }}>
         {colors.slice(0, 10).map((color, index) => {
-            if (!color || !color.hex) return null;
-            return (
-                <div
-                key={index}
-                className={`rounded-full cursor-pointer relative shadow-sm border border-gray-200 transition-transform hover:scale-110 ${selectedColor === color.hex ? 'ring-2 ring-blue-500 ring-offset-1' : ''}`}
-                // Added explicit width/height in style to guarantee dimensions
-                style={{ backgroundColor: color.hex, width: '32px', height: '32px' }}
-                onClick={() => handleQuickColorSelect(color)}
-                title={color.name || color.hex}
-                >
-                {selectedColor === color.hex && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white rounded-full p-0.5 shadow-sm">
-                        <Check size={12} className="text-blue-600" />
-                    </div>
-                    </div>
-                )}
+          if (!color || !color.hex) return null;
+          return (
+            <div
+              key={index}
+              className={`rounded-full cursor-pointer relative shadow-sm border border-gray-200 transition-transform hover:scale-110 ${selectedColor === color.hex ? 'ring-2 ring-blue-500 ring-offset-1' : ''}`}
+              style={{ backgroundColor: color.hex, width: '32px', height: '32px' }}
+              onClick={() => handleQuickColorSelect(color)}
+              title={color.name || color.hex}
+            >
+              {selectedColor === color.hex && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-white rounded-full p-0.5 shadow-sm">
+                    <Check size={12} className="text-blue-600" />
+                  </div>
                 </div>
-            );
+              )}
+            </div>
+          );
         })}
-        </div>
+      </div>
     );
   };
 
   return (
     <div className="p-4 bg-white flex flex-col space-y-6 h-full overflow-y-auto">
       
-      {/* Background Color Input */}
       <div>
         <label className="flex items-center text-sm font-semibold text-gray-700 mb-2">
           <Pipette size={14} className="mr-2 text-blue-500" />
@@ -174,7 +178,6 @@ function BackgroundColorPicker({ extractedColors = [] }) {
         </div>
       </div>
 
-      {/* Quick Colors Section */}
       <div className="space-y-2">
         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
           Quick Colors
@@ -182,7 +185,6 @@ function BackgroundColorPicker({ extractedColors = [] }) {
         {renderColorSwatches(quickColors)}
       </div>
 
-      {/* Recently Used Colors Section */}
       {recentColors.length > 0 && (
         <div className="space-y-2">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -192,7 +194,6 @@ function BackgroundColorPicker({ extractedColors = [] }) {
         </div>
       )}
 
-      {/* Buttons */}
       <div className="flex flex-col gap-2 pt-2">
         <button
           onClick={() => handleApplyColor()}
@@ -208,7 +209,6 @@ function BackgroundColorPicker({ extractedColors = [] }) {
           Apply to Selected Text
         </button>
       </div>
-
     </div>
   );
 }

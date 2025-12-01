@@ -1,6 +1,8 @@
 import { Undo, Redo, Trash2, Download } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
 import './CanvasToolbar.css';
+import Tooltip from '../UI/Tooltip';
+import KeyboardHelp from '../UI/KeyboardHelp';
 
 function CanvasToolbar({ isReady }) {
   const { canvas, clearCanvas, undo, redo } = useCanvasStore();
@@ -40,33 +42,37 @@ function CanvasToolbar({ isReady }) {
 
       {/* Tools */}
       <div className="toolbar-tools">
-        <button
-          onClick={handleUndo}
-          disabled={!isReady}
-          className="toolbar-btn"
-          title="Undo (Ctrl+Z)"
-        >
-          <Undo size={20} />
-        </button>
-        <button
-          onClick={handleRedo}
-          disabled={!isReady}
-          className="toolbar-btn"
-          title="Redo (Ctrl+Shift+Z)"
-        >
-          <Redo size={20} />
-        </button>
+        <Tooltip text="Undo (Ctrl+Z)">
+          <button
+            onClick={handleUndo}
+            disabled={!isReady}
+            className="toolbar-btn"
+          >
+            <Undo size={20} />
+          </button>
+        </Tooltip>
+
+        <Tooltip text="Redo (Ctrl+Shift+Z)">
+          <button
+            onClick={handleRedo}
+            disabled={!isReady}
+            className="toolbar-btn"
+          >
+            <Redo size={20} />
+          </button>
+        </Tooltip>
 
         <div className="toolbar-divider" />
 
-        <button
-          onClick={handleDelete}
-          disabled={!isReady}
-          className="toolbar-btn"
-          title="Delete (Del)"
-        >
-          <Trash2 size={20} />
-        </button>
+        <Tooltip text="Delete Selected (Del)">
+          <button
+            onClick={handleDelete}
+            disabled={!isReady}
+            className="toolbar-btn"
+          >
+            <Trash2 size={20} />
+          </button>
+        </Tooltip>
 
         <button
           onClick={handleClear}
@@ -79,6 +85,8 @@ function CanvasToolbar({ isReady }) {
 
       {/* Spacer */}
       <div className="toolbar-spacer" />
+
+      <KeyboardHelp />
 
       {/* Export button */}
       <button

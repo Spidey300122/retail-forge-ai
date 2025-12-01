@@ -18,7 +18,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
     { id: 'layers', label: 'Layers', icon: Layers },
   ];
 
-  // Load colors & listen for new colors
+  // Load colors ONCE + listen for events (no polling)
   useEffect(() => {
     const loadColors = () => {
       try {
@@ -37,11 +37,12 @@ function Sidebar({ onAddToCanvas, onAddText }) {
       }
     };
 
+    // Load on mount
     loadColors();
 
+    // Listen for color extraction events
     const handleColorsExtracted = (event) => {
       console.log('🎨 Sidebar: Received colorsExtracted event', event.detail);
-
       if (Array.isArray(event.detail) && event.detail.length > 0) {
         setExtractedColors(event.detail);
       }
@@ -49,24 +50,18 @@ function Sidebar({ onAddToCanvas, onAddText }) {
 
     window.addEventListener('colorsExtracted', handleColorsExtracted);
 
-    const interval = setInterval(loadColors, 2000);
-
     return () => {
       window.removeEventListener('colorsExtracted', handleColorsExtracted);
-      clearInterval(interval);
     };
-  }, []);
+  }, []); // Only run once
 
-  // Upload completed
   const handleUploadComplete = (uploadData) => {
     console.log('Upload complete:', uploadData);
-
     if (onAddToCanvas) {
       onAddToCanvas(uploadData);
     }
   };
 
-  // Add text to canvas
   const handleAddText = (type) => {
     const textConfig = {
       heading: { text: 'Heading Text', fontSize: 48, fontWeight: 'bold' },
@@ -79,11 +74,9 @@ function Sidebar({ onAddToCanvas, onAddText }) {
 
   return (
     <div className="sidebar-root">
-      {/* Tabs */}
       <div className="sidebar-tabs">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-
           return (
             <button
               key={tab.id}
@@ -97,10 +90,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
         })}
       </div>
 
-      {/* Tab Content */}
       <div className="sidebar-content">
-        
-        {/* Upload */}
         {activeTab === 'upload' && (
           <div>
             <h3 className="sidebar-heading">Upload Images</h3>
@@ -108,7 +98,6 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           </div>
         )}
 
-        {/* Images */}
         {activeTab === 'images' && (
           <div>
             <h3 className="sidebar-heading">Your Images</h3>
@@ -116,62 +105,43 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           </div>
         )}
 
-        {/* Text */}
         {activeTab === 'text' && (
           <div className="text-buttons">
             <h3 className="sidebar-heading">Add Text</h3>
-
-            <button
-              onClick={() => handleAddText('heading')}
-              className="text-btn text-btn-primary"
-            >
+            <button onClick={() => handleAddText('heading')} className="text-btn text-btn-primary">
               <div className="text-btn-title">Add Heading</div>
               <div className="text-btn-subtitle">Large title text</div>
             </button>
-
-            <button
-              onClick={() => handleAddText('subheading')}
-              className="text-btn text-btn-secondary"
-            >
+            <button onClick={() => handleAddText('subheading')} className="text-btn text-btn-secondary">
               <div className="text-btn-title">Add Subheading</div>
               <div className="text-btn-subtitle">Medium subtitle text</div>
             </button>
-
-            <button
-              onClick={() => handleAddText('body')}
-              className="text-btn text-btn-tertiary"
-            >
+            <button onClick={() => handleAddText('body')} className="text-btn text-btn-tertiary">
               <div className="text-btn-title">Add Body Text</div>
               <div className="text-btn-subtitle">Regular paragraph text</div>
             </button>
           </div>
         )}
 
-        {/* Colors */}
         {activeTab === 'colors' && (
           <div>
             <h3 className="sidebar-heading">Colors</h3>
-
             {extractedColors.length > 0 && (
-              <div
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#fef3c7',
-                  borderRadius: '6px',
-                  marginBottom: '16px',
-                  fontSize: '13px',
-                  color: '#92400e',
-                }}
-              >
+              <div style={{
+                padding: '8px 12px',
+                backgroundColor: '#fef3c7',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                fontSize: '13px',
+                color: '#92400e',
+              }}>
                 ✨ {extractedColors.length} colors extracted from image
               </div>
             )}
-
             <BackgroundColorPicker extractedColors={extractedColors} />
           </div>
         )}
 
-        {/* Layers */}
         {activeTab === 'layers' && (
           <div>
             <h3 className="sidebar-heading">Layers</h3>
