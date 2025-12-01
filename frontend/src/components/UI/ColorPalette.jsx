@@ -3,7 +3,7 @@ import { Palette, Check } from 'lucide-react';
 import './ColorPalette.css';
 
 function ColorPalette({ colors, onSelectColor, selectedColor, title = "Color Palette" }) {
-  const [hoveredColor, setHoveredColor] = useState(null);
+  const [_hoveredColor, setHoveredColor] = useState(null);
 
   const handleColorClick = (color) => {
     if (onSelectColor) {

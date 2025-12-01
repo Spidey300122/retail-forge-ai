@@ -263,63 +263,72 @@ function ImageControls() {
 
   // COLOR EXTRACTION
   const handleExtractColors = async () => {
-    if (!selectedObject || !selectedObject.getSrc) return;
+  if (!selectedObject || !selectedObject.getSrc) return;
 
-    setIsExtractingColors(true);
-    const loadingToast = toast.loading('Extracting colors...');
+  setIsExtractingColors(true);
+  const loadingToast = toast.loading('Extracting colors...');
 
-    try {
-      const imageSrc = selectedObject.getSrc();
-      const response = await fetch(imageSrc);
-      if (!response.ok) throw new Error('Failed to fetch image');
+  try {
+    const imageSrc = selectedObject.getSrc();
+    const response = await fetch(imageSrc);
+    if (!response.ok) throw new Error('Failed to fetch image');
+    
+    const blob = await response.blob();
+    
+    const formData = new FormData();
+    formData.append('file', blob, 'image.jpg');
+    formData.append('count', 5);
+
+    const result = await fetch('http://localhost:8000/process/extract-colors', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await result.json();
+
+    if (data.success) {
+      setExtractedColors(data.colors);
       
-      const blob = await response.blob();
+      // Save to localStorage with timestamp for Sidebar to pick up
+      const colorData = {
+        colors: data.colors,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('extracted_colors', JSON.stringify(colorData));
       
-      const formData = new FormData();
-      formData.append('file', blob, 'image.jpg');
-      formData.append('count', 5);
-
-      const result = await fetch('http://localhost:8000/process/extract-colors', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await result.json();
-
-      if (data.success) {
-        setExtractedColors(data.colors);
-        
-        // Save to localStorage for Sidebar
-        localStorage.setItem('extracted_colors', JSON.stringify(data.colors));
-        
-        // Save to database
-        try {
-          await fetch('http://localhost:3000/api/color/palette', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: 1, // TODO: Replace with actual user ID
-              imageId: selectedObject.id || 'temp',
-              colors: data.colors
-            })
-          });
-          console.log('💾 Palette saved to database');
-        } catch (dbError) {
-          console.warn('Failed to save palette to DB:', dbError);
-        }
-        
-        toast.success(`✨ Extracted ${data.colors.length} colors!`, { id: loadingToast });
-        console.log('🎨 Colors extracted:', data.colors);
-      } else {
-        throw new Error(data.error || 'Failed to extract colors');
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('colorsExtracted', { 
+        detail: data.colors 
+      }));
+      
+      // Save to database
+      try {
+        await fetch('http://localhost:3000/api/color/palette', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: 1,
+            imageId: selectedObject.id || 'temp',
+            colors: data.colors
+          })
+        });
+        console.log('💾 Palette saved to database');
+      } catch (dbError) {
+        console.warn('Failed to save palette to DB:', dbError);
       }
-    } catch (error) {
-      console.error('Color extraction failed:', error);
-      toast.error('Failed to extract colors', { id: loadingToast });
-    } finally {
-      setIsExtractingColors(false);
+      
+      toast.success(`✨ Extracted ${data.colors.length} colors!`, { id: loadingToast });
+      console.log('🎨 Colors extracted:', data.colors);
+    } else {
+      throw new Error(data.error || 'Failed to extract colors');
     }
-  };
+  } catch (error) {
+    console.error('Color extraction failed:', error);
+    toast.error('Failed to extract colors', { id: loadingToast });
+  } finally {
+    setIsExtractingColors(false);
+  }
+};
 
   // BACKGROUND REMOVAL
   const handleRemoveBackground = async () => {
