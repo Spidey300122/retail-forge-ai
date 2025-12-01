@@ -4,26 +4,34 @@ import { logAIInteraction } from '../../db/queries.js';
 import logger from '../../utils/logger.js';
 
 /**
- * Suggest layouts
+ * Suggest layouts using GPT-4 Vision
  */
 export async function suggestLayouts(req, res) {
   const startTime = Date.now();
   
   try {
-    const { productImageUrl, category, style } = req.body;
+    const { productImageUrl, category, style = 'modern' } = req.body;
     
+    // Validation
     if (!productImageUrl || !category) {
       return res.status(400).json({
         success: false,
         error: { message: 'productImageUrl and category are required' }
       });
     }
-    
-    const suggestions = await creativeDirector.suggestLayouts(productImageUrl, category, style);
+
+    logger.info('Requesting layout suggestions', { category, style });
+
+    // Call GPT-4 Vision
+    const suggestions = await creativeDirector.suggestLayouts(
+      productImageUrl, 
+      category, 
+      style
+    );
     
     const processingTime = Date.now() - startTime;
     
-    // Log AI interaction
+    // Log interaction
     await logAIInteraction({
       userId: req.body.userId || 1,
       creativeId: req.body.creativeId || null,
@@ -64,13 +72,13 @@ export async function suggestLayouts(req, res) {
 }
 
 /**
- * Generate copy
+ * Generate copy variations
  */
 export async function generateCopy(req, res) {
   const startTime = Date.now();
   
   try {
-    const { productInfo, style } = req.body;
+    const { productInfo, style = 'energetic' } = req.body;
     
     if (!productInfo || !productInfo.name || !productInfo.category) {
       return res.status(400).json({
