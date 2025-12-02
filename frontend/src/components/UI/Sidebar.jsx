@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Upload, Layers, Sparkles } from 'lucide-react';
+import { Upload, Layers, Sparkles, MessageSquare } from 'lucide-react';
 import ImageUpload from '../Upload/ImageUpload';
 import ImageLibrary from '../Upload/ImageLibrary';
 import LayersPanel from '../Canvas/LayersPanel';
 import LayoutSuggestions from '../AI/LayoutSuggestions';
+import CopySuggestions from '../AI/CopySuggestions'; // NEW
 import './Sidebar.css';
 
 function Sidebar({ onAddToCanvas, onAddText }) {
-  const [activeTab, setActiveTab] = useState('uploads'); // 'uploads', 'layers', 'ai'
+  const [activeTab, setActiveTab] = useState('uploads');
 
   return (
     <div className="sidebar-root">
@@ -32,12 +33,22 @@ function Sidebar({ onAddToCanvas, onAddText }) {
         </button>
 
         <button
-          className={`sidebar-tab ${activeTab === 'ai' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ai')}
-          title="AI Tools"
+          className={`sidebar-tab ${activeTab === 'ai-layout' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ai-layout')}
+          title="AI Layouts"
         >
           <Sparkles size={20} />
-          <span>AI</span>
+          <span>Layouts</span>
+        </button>
+
+        {/* NEW TAB */}
+        <button
+          className={`sidebar-tab ${activeTab === 'ai-copy' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ai-copy')}
+          title="AI Copywriting"
+        >
+          <MessageSquare size={20} />
+          <span>Copy</span>
         </button>
       </div>
 
@@ -45,7 +56,6 @@ function Sidebar({ onAddToCanvas, onAddText }) {
       <div className="sidebar-content">
         {activeTab === 'uploads' && (
           <div className="space-y-6">
-            {/* 1. Upload Section */}
             <section>
               <h3 className="sidebar-heading">Upload Image</h3>
               <ImageUpload onUploadComplete={(data) => {
@@ -55,7 +65,6 @@ function Sidebar({ onAddToCanvas, onAddText }) {
             
             <div className="border-t border-gray-200 my-4" />
 
-            {/* 2. Text Section (Moved Up) */}
             <section>
               <h3 className="sidebar-heading">Add Text</h3>
               <div className="text-buttons">
@@ -82,7 +91,6 @@ function Sidebar({ onAddToCanvas, onAddText }) {
 
             <div className="border-t border-gray-200 my-4" />
             
-            {/* 3. Library Section (Moved Down) */}
             <section>
               <h3 className="sidebar-heading">Your Library</h3>
               <ImageLibrary onSelectImage={onAddToCanvas} />
@@ -97,8 +105,13 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           </div>
         )}
 
-        {activeTab === 'ai' && (
+        {activeTab === 'ai-layout' && (
           <LayoutSuggestions />
+        )}
+
+        {/* NEW TAB CONTENT */}
+        {activeTab === 'ai-copy' && (
+          <CopySuggestions />
         )}
       </div>
     </div>
