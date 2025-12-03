@@ -1,10 +1,12 @@
+// frontend/src/components/UI/Sidebar.jsx - UPDATED VERSION
 import { useState } from 'react';
-import { Upload, Layers, Sparkles, MessageSquare } from 'lucide-react';
+import { Upload, Layers, Sparkles, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import ImageUpload from '../Upload/ImageUpload';
 import ImageLibrary from '../Upload/ImageLibrary';
 import LayersPanel from '../Canvas/LayersPanel';
 import LayoutSuggestions from '../AI/LayoutSuggestions';
-import CopySuggestions from '../AI/CopySuggestions'; // NEW
+import CopySuggestions from '../AI/CopySuggestions';
+import BackgroundGenerator from '../AI/BackgroundGenerator'; // NEW
 import './Sidebar.css';
 
 function Sidebar({ onAddToCanvas, onAddText }) {
@@ -41,7 +43,6 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           <span>Layouts</span>
         </button>
 
-        {/* NEW TAB */}
         <button
           className={`sidebar-tab ${activeTab === 'ai-copy' ? 'active' : ''}`}
           onClick={() => setActiveTab('ai-copy')}
@@ -49,6 +50,16 @@ function Sidebar({ onAddToCanvas, onAddText }) {
         >
           <MessageSquare size={20} />
           <span>Copy</span>
+        </button>
+
+        {/* NEW TAB */}
+        <button
+          className={`sidebar-tab ${activeTab === 'ai-background' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ai-background')}
+          title="AI Background Generator"
+        >
+          <ImageIcon size={20} />
+          <span>Backgrounds</span>
         </button>
       </div>
 
@@ -109,9 +120,13 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           <LayoutSuggestions />
         )}
 
-        {/* NEW TAB CONTENT */}
         {activeTab === 'ai-copy' && (
           <CopySuggestions />
+        )}
+
+        {/* NEW TAB CONTENT */}
+        {activeTab === 'ai-background' && (
+          <BackgroundGenerator />
         )}
       </div>
     </div>
