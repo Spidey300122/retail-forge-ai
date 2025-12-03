@@ -16,4 +16,4 @@ router.post('/suggest-improvements', suggestImprovements);
 // Route for generating a full creative package (layout + copy)
 router.post('/generate-complete', generateCompleteCreative);
 
-export default router;
+export default router; 
