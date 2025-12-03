@@ -1,3 +1,4 @@
+// frontend/src/components/Canvas/ImageControls.jsx
 import { useState, useEffect } from 'react';
 import { 
   RotateCw, FlipHorizontal, FlipVertical, Scissors, Loader, 
@@ -13,6 +14,7 @@ function ImageControls() {
   const { canvas, saveState } = useCanvasStore();
   const [selectedObject, setSelectedObject] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStage, setProcessingStage] = useState('');
   const [lockAspectRatio, setLockAspectRatio] = useState(true);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [isCropping, setIsCropping] = useState(false);
@@ -20,7 +22,6 @@ function ImageControls() {
   const [extractedColors, setExtractedColors] = useState([]);
   const [isExtractingColors, setIsExtractingColors] = useState(false);
 
-  // Helper function to update dimensions
   const updateDimensions = (obj) => {
     if (!obj) return;
     setDimensions({
@@ -29,7 +30,6 @@ function ImageControls() {
     });
   };
 
-  // Update selected object when selection changes
   useEffect(() => {
     if (!canvas) return;
 
@@ -61,11 +61,9 @@ function ImageControls() {
     };
   }, [canvas, isCropping]);
 
-  // NEW: Enforce Lock Aspect Ratio on Canvas Handles
   useEffect(() => {
     if (!selectedObject || !canvas) return;
 
-    // Controls to hide when locked (middle/side handles)
     const sideControls = ['mt', 'mb', 'ml', 'mr'];
     
     sideControls.forEach(control => {
@@ -75,7 +73,6 @@ function ImageControls() {
     canvas.requestRenderAll();
   }, [selectedObject, lockAspectRatio, canvas]);
 
-  // Track dimension changes during scaling
   useEffect(() => {
     if (!canvas || !selectedObject) return;
 
@@ -99,7 +96,6 @@ function ImageControls() {
     };
   }, [canvas, selectedObject, saveState]);
 
-  // ROTATION FUNCTIONS
   const handleRotate = (degrees) => {
     if (!selectedObject || !canvas) return;
     const currentAngle = selectedObject.angle || 0;
@@ -124,7 +120,6 @@ function ImageControls() {
     toast.success(`Rotated ${angle}°`);
   };
 
-  // FLIP FUNCTIONS
   const handleFlipHorizontal = () => {
     if (!selectedObject || !canvas) return;
     selectedObject.set('flipX', !selectedObject.flipX);
@@ -141,7 +136,6 @@ function ImageControls() {
     toast.success('Flipped vertically');
   };
 
-  // SCALE FUNCTIONS
   const handleScalePercent = (factor) => {
     if (!selectedObject || !canvas) return;
     const currentScaleX = selectedObject.scaleX || 1;
@@ -161,14 +155,12 @@ function ImageControls() {
     toast.success(`Scaled to ${percentage}%`);
   };
 
-  // RESIZE FUNCTIONS (FIXED)
   const handleDimensionChange = (dimension, value) => {
     if (!selectedObject || !canvas) return;
     
     const newValue = parseInt(value) || 0;
     if (newValue <= 0) return;
     
-    // Calculate ratio based on CURRENT visual dimensions, not original image
     const currentRatio = dimensions.width / dimensions.height;
     
     if (lockAspectRatio) {
@@ -217,7 +209,6 @@ function ImageControls() {
     saveState();
   };
 
-  // ALIGNMENT FUNCTIONS
   const handleAlign = (type) => {
     if (!selectedObject || !canvas) return;
     
@@ -252,7 +243,6 @@ function ImageControls() {
     toast.success('Aligned');
   };
 
-  // CROP FUNCTIONS
   const handleStartCrop = () => {
     if (!selectedObject) return;
     console.log('🔪 Starting crop mode');
@@ -273,7 +263,6 @@ function ImageControls() {
     setIsCropping(false);
   };
 
-  // COLOR EXTRACTION
   const handleExtractColors = async () => {
     if (!selectedObject || !selectedObject.getSrc) return;
 
@@ -301,7 +290,6 @@ function ImageControls() {
       if (data.success) {
         setExtractedColors(data.colors);
         
-        // Save to localStorage
         const colorData = {
           colors: data.colors,
           timestamp: Date.now()
@@ -312,7 +300,6 @@ function ImageControls() {
           detail: data.colors 
         }));
         
-        // Save to database
         try {
           await fetch('http://localhost:3000/api/color/palette', {
             method: 'POST',
@@ -339,12 +326,13 @@ function ImageControls() {
     }
   };
 
-  // BACKGROUND REMOVAL
   const handleRemoveBackground = async () => {
     if (!selectedObject || !selectedObject.getSrc) return;
 
     setIsProcessing(true);
-    const loadingToast = toast.loading('Removing background...', {
+    setProcessingStage('Preparing image...');
+    
+    const loadingToast = toast.loading('Preparing image...', {
       duration: Infinity,
     });
 
@@ -360,9 +348,27 @@ function ImageControls() {
         throw new Error(`Image too large (${sizeMB.toFixed(1)}MB, max 10MB)`);
       }
       
+      setProcessingStage('Analyzing image...');
+      toast.loading('Analyzing image...', { id: loadingToast });
+      
       const formData = new FormData();
       formData.append('file', blob, 'image.jpg');
       formData.append('method', 'simple');
+
+      // Show progress updates
+      setTimeout(() => {
+        if (isProcessing) {
+          setProcessingStage('Removing background...');
+          toast.loading('Removing background...', { id: loadingToast });
+        }
+      }, 2000);
+
+      setTimeout(() => {
+        if (isProcessing) {
+          setProcessingStage('Almost done...');
+          toast.loading('Almost done...', { id: loadingToast });
+        }
+      }, 5000);
 
       const result = await fetch('http://localhost:8000/process/remove-background', {
         method: 'POST',
@@ -372,6 +378,9 @@ function ImageControls() {
       const data = await result.json();
 
       if (data.success) {
+        setProcessingStage('Applying result...');
+        toast.loading('Applying result...', { id: loadingToast });
+        
         const downloadUrl = `http://localhost:8000${data.download_url}`;
         
         fabric.Image.fromURL(downloadUrl, (newImg) => {
@@ -404,10 +413,10 @@ function ImageControls() {
       toast.error('Failed to remove background', { id: loadingToast });
     } finally {
       setIsProcessing(false);
+      setProcessingStage('');
     }
   };
 
-  // RESET FUNCTION
   const handleReset = () => {
     if (!selectedObject || !canvas) return;
     
@@ -446,6 +455,25 @@ function ImageControls() {
   return (
     <div className="image-controls">
       <h4 className="image-controls-heading">Image Tools</h4>
+
+      {/* Processing Indicator */}
+      {isProcessing && processingStage && (
+        <div style={{
+          padding: '12px',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #dbeafe',
+          borderRadius: '6px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '13px',
+          color: '#1e40af'
+        }}>
+          <Loader size={16} className="animate-spin" />
+          <span>{processingStage}</span>
+        </div>
+      )}
 
       {/* DIMENSIONS */}
       <div className="control-section">
@@ -685,7 +713,7 @@ function ImageControls() {
           {isProcessing ? (
             <>
               <Loader size={16} className="animate-spin" />
-              Processing...
+              {processingStage || 'Processing...'}
             </>
           ) : (
             <>
