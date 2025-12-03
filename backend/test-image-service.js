@@ -2,7 +2,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,26 +12,32 @@ const IMAGE_SERVICE = 'http://localhost:8000';
 console.log('\n🖼️  TESTING IMAGE PROCESSING SERVICE\n');
 console.log('='.repeat(60));
 
-// Create a test image
-function createTestImage() {
-  const canvas = `
-<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
-  <rect width="400" height="400" fill="#FF5733"/>
-  <circle cx="200" cy="200" r="100" fill="#3498DB"/>
-</svg>
-  `.trim();
+// Use existing test-image.jpg or create a minimal PNG
+function getTestImage() {
+  const preferredPath = join(__dirname, 'test-image.jpg');
   
-  const path = 'temp/test-image.svg';
-  fs.mkdirSync('temp', { recursive: true });
-  fs.writeFileSync(path, canvas);
-  return path;
+  if (fs.existsSync(preferredPath)) {
+    return preferredPath;
+  }
+
+  console.log('⚠️ test-image.jpg not found, creating temp PNG...');
+  
+  // Create a minimal 1x1 Red PNG
+  const buffer = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const tempPath = join(__dirname, 'temp', 'test-image.png');
+  
+  if (!fs.existsSync(join(__dirname, 'temp'))) {
+    fs.mkdirSync(join(__dirname, 'temp'));
+  }
+  
+  fs.writeFileSync(tempPath, buffer);
+  return tempPath;
 }
 
 async function testColorExtraction() {
   console.log('\n🎨 Test 1: Color Extraction');
   try {
-    // Create test image
-    const testImagePath = createTestImage();
+    const testImagePath = getTestImage();
     
     const formData = new FormData();
     formData.append('file', fs.createReadStream(testImagePath));
@@ -53,7 +59,7 @@ async function testColorExtraction() {
       return false;
     }
   } catch (error) {
-    console.error('❌ Color extraction failed:', error.message);
+    console.error('❌ Color extraction failed:', error.response?.data?.error || error.message);
     return false;
   }
 }
@@ -61,7 +67,7 @@ async function testColorExtraction() {
 async function testImageOptimization() {
   console.log('\n🗜️  Test 2: Image Optimization');
   try {
-    const testImagePath = createTestImage();
+    const testImagePath = getTestImage();
     
     const formData = new FormData();
     formData.append('file', fs.createReadStream(testImagePath));
@@ -83,7 +89,7 @@ async function testImageOptimization() {
       return false;
     }
   } catch (error) {
-    console.error('❌ Optimization failed:', error.message);
+    console.error('❌ Optimization failed:', error.response?.data?.error || error.message);
     return false;
   }
 }
@@ -93,17 +99,18 @@ async function testImageOptimization() {
   const colorOk = await testColorExtraction();
   const optimizeOk = await testImageOptimization();
   
-  // Cleanup
+  // Cleanup temp file if created
   try {
-    fs.unlinkSync('temp/test-image.svg');
+    const tempPath = join(__dirname, 'temp', 'test-image.png');
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
   } catch (e) {}
   
   console.log('\n' + '='.repeat(60));
   if (colorOk && optimizeOk) {
     console.log('✅ ALL IMAGE PROCESSING TESTS PASSED\n');
+    process.exit(0);
   } else {
     console.log('❌ SOME TESTS FAILED\n');
     process.exit(1);
   }
-  process.exit(0);
 })();

@@ -1,3 +1,4 @@
+// frontend/src/components/Canvas/LayersPanel.jsx
 import { useEffect, useState } from 'react';
 import { Eye, EyeOff, Lock, Unlock, Trash2, GripVertical } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
@@ -72,7 +73,7 @@ function LayersPanel() {
 
   const handleToggleVisibility = (layer, e) => {
     e.stopPropagation();
-    e.preventDefault(); // Prevent any default behavior
+    e.preventDefault();
     
     if (!canvas) return;
     
@@ -86,8 +87,6 @@ function LayersPanel() {
         l.id === layer.id ? { ...l, visible: newVisible } : l
       )
     );
-    
-    console.log(`👁️ Layer ${layer.name} visibility: ${newVisible}`);
   };
 
   const handleToggleLock = (layer, e) => {
@@ -107,8 +106,6 @@ function LayersPanel() {
         l.id === layer.id ? { ...l, locked: newLocked } : l
       )
     );
-    
-    console.log(`🔒 Layer ${layer.name} locked: ${newLocked}`);
   };
 
   const handleDeleteLayer = (layer, e) => {
@@ -119,7 +116,6 @@ function LayersPanel() {
     canvas.remove(layer.object);
     canvas.renderAll();
     saveState();
-    console.log(`🗑️ Deleted layer: ${layer.name}`);
   };
 
   // Drag and drop handlers
@@ -155,7 +151,6 @@ function LayersPanel() {
     saveState();
 
     setDraggedLayer(null);
-    console.log(`📦 Moved layer from ${fromIndex} to ${toIndex}`);
   };
 
   const handleDragEnd = () => {
@@ -172,7 +167,8 @@ function LayersPanel() {
           </p>
         </div>
       ) : (
-        layers.map((layer) => (
+        // FIX: Reverse the layers array for rendering so the top visual layer is the top canvas object
+        [...layers].reverse().map((layer) => (
           <div
             key={layer.id}
             draggable

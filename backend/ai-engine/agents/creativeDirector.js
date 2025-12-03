@@ -36,8 +36,6 @@ export async function suggestLayouts(productImageUrl, category, style = 'modern'
     
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      // REMOVED: response_format: { type: "json_object" } 
-      // strict mode often causes empty responses with Vision inputs
       messages: [
         {
           role: "user",
@@ -73,7 +71,7 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
               type: "image_url",
               image_url: { 
                 url: productImageUrl,
-                detail: "high"
+                detail: "low" // Changed to low to reduce token usage and potential safety triggers
               }
             }
           ]
@@ -95,9 +93,14 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
     const finishReason = choice.finish_reason;
 
     if (!rawText) {
-        // Use warn for data logging to avoid logger.error schema issues
         logger.warn('AI returned empty content', { finishReason });
         throw new Error(`AI returned empty response (Reason: ${finishReason})`);
+    }
+
+    // Handled text-based refusal that GPT-4 sometimes returns in 'content'
+    if (rawText.includes("I'm sorry") || rawText.includes("I cannot assist")) {
+       logger.warn('AI refused request in content', { rawText });
+       throw new Error("AI refused to process this specific image. Please try a different product image.");
     }
 
     // Clean potential markdown wrappers
@@ -124,7 +127,6 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
     
     return suggestions;
   } catch (error) {
-    // Pass error object correctly to logger.error
     logger.error('Failed to generate layout suggestions', error);
     throw error;
   }

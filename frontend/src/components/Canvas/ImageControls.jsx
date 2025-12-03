@@ -46,7 +46,6 @@ function ImageControls() {
 
     const handleDeselection = () => {
       if (isCropping) return;
-      
       setSelectedObject(null);
       setDimensions({ width: 0, height: 0 });
     };
@@ -61,6 +60,20 @@ function ImageControls() {
       canvas.off('selection:cleared', handleDeselection);
     };
   }, [canvas, isCropping]);
+
+  // NEW: Enforce Lock Aspect Ratio on Canvas Handles
+  useEffect(() => {
+    if (!selectedObject || !canvas) return;
+
+    // Controls to hide when locked (middle/side handles)
+    const sideControls = ['mt', 'mb', 'ml', 'mr'];
+    
+    sideControls.forEach(control => {
+      selectedObject.setControlVisible(control, !lockAspectRatio);
+    });
+
+    canvas.requestRenderAll();
+  }, [selectedObject, lockAspectRatio, canvas]);
 
   // Track dimension changes during scaling
   useEffect(() => {
@@ -89,7 +102,6 @@ function ImageControls() {
   // ROTATION FUNCTIONS
   const handleRotate = (degrees) => {
     if (!selectedObject || !canvas) return;
-    
     const currentAngle = selectedObject.angle || 0;
     selectedObject.rotate(currentAngle + degrees);
     canvas.renderAll();
@@ -99,13 +111,11 @@ function ImageControls() {
 
   const handleCustomRotation = () => {
     if (!selectedObject || !canvas) return;
-    
     const angle = parseFloat(customRotation);
     if (isNaN(angle)) {
       toast.error('Please enter a valid number');
       return;
     }
-
     const currentAngle = selectedObject.angle || 0;
     selectedObject.rotate(currentAngle + angle);
     canvas.renderAll();
@@ -134,7 +144,6 @@ function ImageControls() {
   // SCALE FUNCTIONS
   const handleScalePercent = (factor) => {
     if (!selectedObject || !canvas) return;
-    
     const currentScaleX = selectedObject.scaleX || 1;
     const currentScaleY = selectedObject.scaleY || 1;
     
@@ -152,46 +161,49 @@ function ImageControls() {
     toast.success(`Scaled to ${percentage}%`);
   };
 
-  // RESIZE FUNCTIONS
+  // RESIZE FUNCTIONS (FIXED)
   const handleDimensionChange = (dimension, value) => {
     if (!selectedObject || !canvas) return;
     
     const newValue = parseInt(value) || 0;
     if (newValue <= 0) return;
     
-    const originalWidth = selectedObject.width;
-    const originalHeight = selectedObject.height;
-    const aspectRatio = originalWidth / originalHeight;
+    // Calculate ratio based on CURRENT visual dimensions, not original image
+    const currentRatio = dimensions.width / dimensions.height;
     
     if (lockAspectRatio) {
       if (dimension === 'width') {
-        const newScaleX = newValue / originalWidth;
+        const newHeight = Math.round(newValue / currentRatio);
+        
         selectedObject.set({
-          scaleX: newScaleX,
-          scaleY: newScaleX,
+          scaleX: newValue / selectedObject.width,
+          scaleY: newHeight / selectedObject.height,
         });
+        
         setDimensions({
           width: newValue,
-          height: Math.round(newValue / aspectRatio),
+          height: newHeight,
         });
       } else {
-        const newScaleY = newValue / originalHeight;
+        const newWidth = Math.round(newValue * currentRatio);
+        
         selectedObject.set({
-          scaleX: newScaleY,
-          scaleY: newScaleY,
+          scaleX: newWidth / selectedObject.width,
+          scaleY: newValue / selectedObject.height,
         });
+        
         setDimensions({
-          width: Math.round(newValue * aspectRatio),
+          width: newWidth,
           height: newValue,
         });
       }
     } else {
       if (dimension === 'width') {
-        const newScaleX = newValue / originalWidth;
+        const newScaleX = newValue / selectedObject.width;
         selectedObject.set({ scaleX: newScaleX });
         setDimensions({ ...dimensions, width: newValue });
       } else {
-        const newScaleY = newValue / originalHeight;
+        const newScaleY = newValue / selectedObject.height;
         selectedObject.set({ scaleY: newScaleY });
         setDimensions({ ...dimensions, height: newValue });
       }
@@ -263,72 +275,69 @@ function ImageControls() {
 
   // COLOR EXTRACTION
   const handleExtractColors = async () => {
-  if (!selectedObject || !selectedObject.getSrc) return;
+    if (!selectedObject || !selectedObject.getSrc) return;
 
-  setIsExtractingColors(true);
-  const loadingToast = toast.loading('Extracting colors...');
+    setIsExtractingColors(true);
+    const loadingToast = toast.loading('Extracting colors...');
 
-  try {
-    const imageSrc = selectedObject.getSrc();
-    const response = await fetch(imageSrc);
-    if (!response.ok) throw new Error('Failed to fetch image');
-    
-    const blob = await response.blob();
-    
-    const formData = new FormData();
-    formData.append('file', blob, 'image.jpg');
-    formData.append('count', 5);
-
-    const result = await fetch('http://localhost:8000/process/extract-colors', {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await result.json();
-
-    if (data.success) {
-      setExtractedColors(data.colors);
+    try {
+      const imageSrc = selectedObject.getSrc();
+      const response = await fetch(imageSrc);
+      if (!response.ok) throw new Error('Failed to fetch image');
       
-      // Save to localStorage with timestamp for Sidebar to pick up
-      const colorData = {
-        colors: data.colors,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('extracted_colors', JSON.stringify(colorData));
+      const blob = await response.blob();
       
-      // Dispatch custom event to notify other components
-      window.dispatchEvent(new CustomEvent('colorsExtracted', { 
-        detail: data.colors 
-      }));
-      
-      // Save to database
-      try {
-        await fetch('http://localhost:3000/api/color/palette', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: 1,
-            imageId: selectedObject.id || 'temp',
-            colors: data.colors
-          })
-        });
-        console.log('💾 Palette saved to database');
-      } catch (dbError) {
-        console.warn('Failed to save palette to DB:', dbError);
+      const formData = new FormData();
+      formData.append('file', blob, 'image.jpg');
+      formData.append('count', 5);
+
+      const result = await fetch('http://localhost:8000/process/extract-colors', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await result.json();
+
+      if (data.success) {
+        setExtractedColors(data.colors);
+        
+        // Save to localStorage
+        const colorData = {
+          colors: data.colors,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('extracted_colors', JSON.stringify(colorData));
+        
+        window.dispatchEvent(new CustomEvent('colorsExtracted', { 
+          detail: data.colors 
+        }));
+        
+        // Save to database
+        try {
+          await fetch('http://localhost:3000/api/color/palette', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: 1,
+              imageId: selectedObject.id || 'temp',
+              colors: data.colors
+            })
+          });
+        } catch (dbError) {
+          console.warn('Failed to save palette to DB:', dbError);
+        }
+        
+        toast.success(`✨ Extracted ${data.colors.length} colors!`, { id: loadingToast });
+      } else {
+        throw new Error(data.error || 'Failed to extract colors');
       }
-      
-      toast.success(`✨ Extracted ${data.colors.length} colors!`, { id: loadingToast });
-      console.log('🎨 Colors extracted:', data.colors);
-    } else {
-      throw new Error(data.error || 'Failed to extract colors');
+    } catch (error) {
+      console.error('Color extraction failed:', error);
+      toast.error('Failed to extract colors', { id: loadingToast });
+    } finally {
+      setIsExtractingColors(false);
     }
-  } catch (error) {
-    console.error('Color extraction failed:', error);
-    toast.error('Failed to extract colors', { id: loadingToast });
-  } finally {
-    setIsExtractingColors(false);
-  }
-};
+  };
 
   // BACKGROUND REMOVAL
   const handleRemoveBackground = async () => {
@@ -340,18 +349,6 @@ function ImageControls() {
     });
 
     try {
-      setTimeout(() => {
-        toast.loading('📸 Analyzing image...', { id: loadingToast });
-      }, 2000);
-      
-      setTimeout(() => {
-        toast.loading('🎨 Removing background (30 seconds)...', { id: loadingToast });
-      }, 5000);
-      
-      setTimeout(() => {
-        toast.loading('⏳ Almost done...', { id: loadingToast });
-      }, 15000);
-
       const imageSrc = selectedObject.getSrc();
       const response = await fetch(imageSrc);
       if (!response.ok) throw new Error('Failed to fetch image');
@@ -362,8 +359,6 @@ function ImageControls() {
       if (sizeMB > 10) {
         throw new Error(`Image too large (${sizeMB.toFixed(1)}MB, max 10MB)`);
       }
-      
-      console.log(`📏 Image size: ${sizeMB.toFixed(2)}MB`);
       
       const formData = new FormData();
       formData.append('file', blob, 'image.jpg');
@@ -406,15 +401,7 @@ function ImageControls() {
       }
     } catch (error) {
       console.error('Background removal failed:', error);
-      
-      let errorMessage = 'Failed to remove background';
-      if (error.message.includes('timeout')) {
-        errorMessage = '⏱️ Processing timed out. Try a smaller image.';
-      } else if (error.message.includes('too large')) {
-        errorMessage = error.message;
-      }
-      
-      toast.error(errorMessage, { id: loadingToast });
+      toast.error('Failed to remove background', { id: loadingToast });
     } finally {
       setIsProcessing(false);
     }
@@ -441,7 +428,6 @@ function ImageControls() {
     }
   };
 
-  // Copy color to clipboard
   const handleColorClick = (color) => {
     navigator.clipboard.writeText(color.hex);
     toast.success(`Copied ${color.hex} to clipboard`);
