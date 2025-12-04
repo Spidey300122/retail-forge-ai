@@ -1,4 +1,3 @@
-// backend/ai-engine/compliance/rules/designRules.js
 import { ComplianceRule } from '../ComplianceRule.js'; // Updated import path
 
 /**
@@ -194,7 +193,6 @@ export class NoOverlayRule extends ComplianceRule {
       criticalElements.push({ ...creativeData.tag, name: 'tag' });
     }
 
-    // Check if any regular elements overlap with critical elements
     const violations = [];
     
     if (creativeData.elements) {
@@ -259,7 +257,6 @@ export class DrinkAwareRule extends ComplianceRule {
   }
 
   validate(creativeData) {
-    // Only applies to alcohol products
     if (creativeData.category !== 'alcohol' && !creativeData.isAlcohol) {
       return { passed: true };
     }
@@ -274,7 +271,6 @@ export class DrinkAwareRule extends ComplianceRule {
 
     const dw = creativeData.drinkaware;
     
-    // Check minimum height
     let minHeight = 20;
     if (creativeData.format === 'says') {
       minHeight = 12;
@@ -288,7 +284,6 @@ export class DrinkAwareRule extends ComplianceRule {
       };
     }
 
-    // Check color (must be all black or all white)
     if (dw.color && dw.color !== '#000000' && dw.color !== '#ffffff') {
       return {
         passed: false,
@@ -297,7 +292,6 @@ export class DrinkAwareRule extends ComplianceRule {
       };
     }
 
-    // Check contrast with background
     if (creativeData.backgroundColor && dw.color) {
       const contrast = new WCAGContrastRule().calculateContrast(
         creativeData.backgroundColor,
@@ -314,5 +308,48 @@ export class DrinkAwareRule extends ComplianceRule {
     }
 
     return { passed: true };
+  }
+}
+
+/**
+ * Rule 14: Background Color Validation
+ */
+export class BackgroundColorRule extends ComplianceRule {
+  constructor() {
+    super('background_color', 'Background Color', 'design', 'warning');
+  }
+
+  validate(creativeData) {
+    if (!creativeData.backgroundColor) {
+      return { passed: true };
+    }
+
+    const bgColor = creativeData.backgroundColor.toLowerCase();
+
+    const isDark = this.getColorBrightness(bgColor) < 50;
+
+    const isTooLight = this.getColorBrightness(bgColor) > 250;
+
+    if (isDark) {
+      return {
+        passed: false,
+        message: 'Very dark backgrounds may reduce readability',
+        suggestion: 'Consider using a lighter background color',
+      };
+    }
+
+    if (isTooLight && bgColor === '#ffffff') {
+      return { passed: true };
+    }
+
+    return { passed: true };
+  }
+
+  getColorBrightness(hex) {
+    const rgb = parseInt(hex.slice(1), 16);
+    const r = (rgb >> 16) & 0xff;
+    const g = (rgb >> 8) & 0xff;
+    const b = rgb & 0xff;
+    return (r * 299 + g * 587 + b * 114) / 1000;
   }
 }

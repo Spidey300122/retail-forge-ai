@@ -1,6 +1,10 @@
 // frontend/src/components/UI/Sidebar.jsx
 import { useState, useEffect } from 'react';
-import { Upload, Layers, Sparkles, MessageSquare, Image as ImageIcon, Palette, Type, Wand2 } from 'lucide-react';
+import { 
+  Upload, Layers, Sparkles, MessageSquare, 
+  Image as ImageIcon, Palette, Type, Wand2, Shield 
+} from 'lucide-react';
+
 import ImageUpload from '../Upload/ImageUpload';
 import ImageLibrary from '../Upload/ImageLibrary';
 import LayersPanel from '../Canvas/LayersPanel';
@@ -9,6 +13,8 @@ import CopySuggestions from '../AI/CopySuggestions';
 import BackgroundGenerator from '../AI/BackgroundGenerator';
 import BackgroundColorPicker from '../Canvas/BackgroundColorPicker';
 import SmartAssistant from '../AI/SmartAssistant';
+import ValidationPanel from '../Validation/ValidationPanel';
+
 import './Sidebar.css';
 
 function Sidebar({ onAddToCanvas, onAddText }) {
@@ -47,6 +53,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
 
   return (
     <div className="sidebar-root">
+      
       {/* Tabs Header */}
       <div className="sidebar-tabs">
         <button
@@ -66,7 +73,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           <Palette size={20} />
           <span>Images</span>
         </button>
-        
+
         <button
           className={`sidebar-tab ${activeTab === 'layers' ? 'active' : ''}`}
           onClick={() => setActiveTab('layers')}
@@ -111,10 +118,21 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           <ImageIcon size={20} />
           <span>Gen BG</span>
         </button>
+
+        {/* ⭐ NEW — Validation Tab */}
+        <button
+          className={`sidebar-tab ${activeTab === 'validation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('validation')}
+          title="Compliance Validation"
+        >
+          <Shield size={20} />
+          <span>Validate</span>
+        </button>
       </div>
 
       {/* Content Area */}
       <div className="sidebar-content">
+
         {activeTab === 'uploads' && (
           <div className="space-y-6">
             <section>
@@ -123,7 +141,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
                 console.log('Upload complete:', data);
               }} />
             </section>
-            
+
             <div className="border-t border-gray-200 my-4" />
 
             <section>
@@ -177,21 +195,19 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           </div>
         )}
 
-        {activeTab === 'ai-assistant' && (
-          <SmartAssistant />
+        {activeTab === 'ai-assistant' && <SmartAssistant />}
+
+        {activeTab === 'ai-layout' && <LayoutSuggestions />}
+
+        {activeTab === 'ai-copy' && <CopySuggestions />}
+
+        {activeTab === 'ai-background' && <BackgroundGenerator />}
+
+        {/* ⭐ NEW — Validation Panel */}
+        {activeTab === 'validation' && (
+          <ValidationPanel />
         )}
 
-        {activeTab === 'ai-layout' && (
-          <LayoutSuggestions />
-        )}
-
-        {activeTab === 'ai-copy' && (
-          <CopySuggestions />
-        )}
-
-        {activeTab === 'ai-background' && (
-          <BackgroundGenerator />
-        )}
       </div>
     </div>
   );
