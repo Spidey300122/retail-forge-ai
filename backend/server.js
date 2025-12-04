@@ -9,6 +9,8 @@ import aiRoutes from './api/routes/ai.js';
 import imageRoutes from './api/routes/image.js';
 import colorRoutes from './api/routes/color.js';
 import orchestratorRoutes from './api/routes/orchestrator.js';
+import validateRoutes from './api/routes/validate.js';
+
 
 dotenv.config();
 
@@ -60,6 +62,7 @@ app.get('/health', async (req, res) => {
 });
 app.use('/api/upload', uploadRoutes);
 app.use('/api/orchestrator', orchestratorRoutes);
+app.use('/api/validate', validateRoutes);
 // API routes (will add later)
 app.get('/api/test', (req, res) => {
   res.json({ 
