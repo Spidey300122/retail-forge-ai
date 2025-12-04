@@ -2,11 +2,15 @@
 import { useState } from 'react';
 import { Sparkles, Loader, MessageSquare, Lightbulb, CheckCircle, AlertCircle } from 'lucide-react';
 import useOrchestrator from '../../hooks/useOrchestrator';
+import useAIStore from '../../store/aiStore'; // Import the store
 import toast from 'react-hot-toast';
 
 function SmartAssistant() {
   const { processRequest, isProcessing, results } = useOrchestrator();
   const [userInput, setUserInput] = useState('');
+  
+  // Get setters from the store
+  const { setGeneratedLayouts, setGeneratedCopy } = useAIStore();
 
   const examplePrompts = [
     'Create a modern layout for an orange juice product',
@@ -24,7 +28,20 @@ function SmartAssistant() {
     }
 
     try {
-      await processRequest({ userInput });
+      // Process the request
+      const data = await processRequest({ userInput });
+      
+      // Save results to the store for other tabs to access
+      if (data.layouts && data.layouts.length > 0) {
+        setGeneratedLayouts(data.layouts);
+        console.log('✅ Layouts saved to store:', data.layouts.length);
+      }
+      
+      if (data.copy && data.copy.length > 0) {
+        setGeneratedCopy(data.copy);
+        console.log('✅ Copy saved to store:', data.copy.length);
+      }
+
       setUserInput('');
     } catch (error) {
       console.error('Request failed:', error);

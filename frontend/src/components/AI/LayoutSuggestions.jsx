@@ -1,12 +1,16 @@
-import { useState } from 'react';
+// frontend/src/components/AI/LayoutSuggestions.jsx
+import { useState, useEffect } from 'react';
 import { Sparkles, Loader, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useCanvasStore from '../../store/canvasStore';
+import useAIStore from '../../store/aiStore'; // Import the store
 import { fabric } from 'fabric';
 import './LayoutSuggestions.css';
 
 function LayoutSuggestions() {
   const { canvas } = useCanvasStore();
+  const { generatedLayouts } = useAIStore(); // Get layouts from store
+  
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedLayout, setSelectedLayout] = useState(null);
@@ -15,6 +19,16 @@ function LayoutSuggestions() {
   const [category, setCategory] = useState('beverages');
   const [style, setStyle] = useState('modern');
   const [productImageUrl, setProductImageUrl] = useState('');
+
+  // Sync suggestions when the store updates
+  useEffect(() => {
+    if (generatedLayouts && generatedLayouts.length > 0) {
+      setSuggestions(generatedLayouts);
+      toast.success(`Loaded ${generatedLayouts.length} layouts from Assistant`, {
+        icon: '🤖'
+      });
+    }
+  }, [generatedLayouts]);
 
   const categories = [
     'beverages', 'food', 'beauty', 'electronics', 
@@ -79,9 +93,13 @@ function LayoutSuggestions() {
       // Apply layout elements
       const elements = layout.elements;
 
-      // Add product image placeholder
-      if (elements.product && productImageUrl) {
-        fabric.Image.fromURL(productImageUrl, (img) => {
+      // Add product image placeholder or real image
+      const imageUrlToUse = productImageUrl || "https://placehold.co/600x600?text=Product";
+
+      if (elements.product) {
+        fabric.Image.fromURL(imageUrlToUse, (img) => {
+          if (!img) return;
+          
           img.set({
             left: elements.product.x,
             top: elements.product.y,
