@@ -21,7 +21,8 @@ export async function validateCreative(req, res) {
     logger.info('Validating creative', { format: creativeData.format });
 
     // Run validation
-    const results = ruleEngine.validateAll(creativeData);
+    // FIX: Added 'await' here because validateAll is asynchronous
+    const results = await ruleEngine.validateAll(creativeData);
 
     const processingTime = Date.now() - startTime;
 
