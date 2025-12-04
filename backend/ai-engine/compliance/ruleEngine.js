@@ -1,30 +1,10 @@
 // backend/ai-engine/compliance/ruleEngine.js
 import logger from '../../utils/logger.js';
+import { ComplianceRule } from './ComplianceRule.js'; // Import the base class
 import * as contentRules from './rules/contentRules.js';
 import * as designRules from './rules/designRules.js';
 import * as layoutRules from './rules/layoutRules.js';
-import * as tagRules from './rules/tagRules.js';
-
-/**
- * Base Rule Class
- */
-export class ComplianceRule {
-  constructor(ruleId, name, category, severity) {
-    this.ruleId = ruleId;
-    this.name = name;
-    this.category = category; // 'content', 'design', 'tag', 'layout', 'accessibility'
-    this.severity = severity; // 'hard_fail', 'warning'
-  }
-
-  /**
-   * Validate creative data against this rule
-   * @param {Object} creativeData - Creative data to validate
-   * @returns {Object} { passed: boolean, violations: [] }
-   */
-  validate(creativeData) {
-    throw new Error('validate() must be implemented by subclass');
-  }
-}
+import * as tagRules from './rules/tagRules.js'; // Assuming this file exists based on your original code
 
 /**
  * Rule Engine - Coordinates all compliance rules

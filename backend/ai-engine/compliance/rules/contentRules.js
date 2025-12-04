@@ -1,5 +1,5 @@
 // backend/ai-engine/compliance/rules/contentRules.js
-import { ComplianceRule } from '../ruleEngine.js';
+import { ComplianceRule } from '../ComplianceRule.js'; // Updated import path
 
 /**
  * Rule 1: No T&Cs Text

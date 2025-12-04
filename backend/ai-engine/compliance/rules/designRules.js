@@ -1,5 +1,5 @@
 // backend/ai-engine/compliance/rules/designRules.js
-import { ComplianceRule } from '../ruleEngine.js';
+import { ComplianceRule } from '../ComplianceRule.js'; // Updated import path
 
 /**
  * Rule 9: Minimum Font Size
