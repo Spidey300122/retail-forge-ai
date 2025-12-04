@@ -32,18 +32,17 @@ export class RuleEngine {
     // -----------------------------
     // CONTENT RULES
     // -----------------------------
-
-    // 1️⃣ Add BERT Rule FIRST (most comprehensive)
     this.addRule(new BERTTextRule());
-
-    // 2️⃣ Add fallback rule-based content rules
     this.addRule(new NoTCsRule());
     this.addRule(new NoCompetitionRule());
     this.addRule(new NoCharityRule());
 
-    // If tagRules is used:
+    // TAG RULES
     if (tagRules?.ApprovedTagsOnlyRule) {
       this.addRule(new tagRules.ApprovedTagsOnlyRule());
+    }
+    if (tagRules?.ClubcardDateFormatRule) {
+      this.addRule(new tagRules.ClubcardDateFormatRule());
     }
 
     // -----------------------------
@@ -64,6 +63,10 @@ export class RuleEngine {
     if (designRules.DrinkAwareRule) {
       this.addRule(new designRules.DrinkAwareRule());
     }
+    // New ✓ Background Color Rule
+    if (designRules.BackgroundColorRule) {
+      this.addRule(new designRules.BackgroundColorRule());
+    }
 
     // -----------------------------
     // LAYOUT RULES
@@ -73,6 +76,15 @@ export class RuleEngine {
     }
     if (layoutRules.SocialSafeZoneRule) {
       this.addRule(new layoutRules.SocialSafeZoneRule());
+    }
+    if (layoutRules.CTAPositionRule) {
+      this.addRule(new layoutRules.CTAPositionRule());
+    }
+    if (layoutRules.ElementHierarchyRule) {
+      this.addRule(new layoutRules.ElementHierarchyRule());
+    }
+    if (layoutRules.MaxPackshotsRule) {
+      this.addRule(new layoutRules.MaxPackshotsRule());
     }
   }
 
@@ -173,7 +185,6 @@ export class RuleEngine {
     if (totalRules === 0) return 0;
 
     const baseScore = (passedRules / totalRules) * 100;
-
     const hardFailPenalty = results.violations.length * 10;
     const warningPenalty = results.warnings.length * 2;
 
