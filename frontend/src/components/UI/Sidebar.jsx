@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Upload, Layers, Sparkles, MessageSquare, 
-  Image as ImageIcon, Palette, Type, Wand2, Shield 
+  Image as ImageIcon, Palette, Type, Wand2, Shield, Download 
 } from 'lucide-react';
 
 import ImageUpload from '../Upload/ImageUpload';
@@ -14,6 +14,7 @@ import BackgroundGenerator from '../AI/BackgroundGenerator';
 import BackgroundColorPicker from '../Canvas/BackgroundColorPicker';
 import SmartAssistant from '../AI/SmartAssistant';
 import ValidationPanel from '../Validation/ValidationPanel';
+import ExportPanel from '../Export/ExportPanel'; // <-- Added Day 16
 
 import './Sidebar.css';
 
@@ -119,7 +120,6 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           <span>Gen BG</span>
         </button>
 
-        {/* ⭐ NEW — Validation Tab */}
         <button
           className={`sidebar-tab ${activeTab === 'validation' ? 'active' : ''}`}
           onClick={() => setActiveTab('validation')}
@@ -127,6 +127,16 @@ function Sidebar({ onAddToCanvas, onAddText }) {
         >
           <Shield size={20} />
           <span>Validate</span>
+        </button>
+
+        {/* ⭐ Export Tab Added */}
+        <button
+          className={`sidebar-tab ${activeTab === 'export' ? 'active' : ''}`}
+          onClick={() => setActiveTab('export')}
+          title="Export"
+        >
+          <Download size={20} />
+          <span>Export</span>
         </button>
       </div>
 
@@ -203,10 +213,10 @@ function Sidebar({ onAddToCanvas, onAddText }) {
 
         {activeTab === 'ai-background' && <BackgroundGenerator />}
 
-        {/* ⭐ NEW — Validation Panel */}
-        {activeTab === 'validation' && (
-          <ValidationPanel />
-        )}
+        {activeTab === 'validation' && <ValidationPanel />}
+        
+        {/* ⭐ Export Panel */}
+        {activeTab === 'export' && <ExportPanel />}
 
       </div>
     </div>

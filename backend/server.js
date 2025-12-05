@@ -11,6 +11,7 @@ import imageRoutes from './api/routes/image.js';
 import colorRoutes from './api/routes/color.js';
 import orchestratorRoutes from './api/routes/orchestrator.js';
 import validateRoutes from './api/routes/validate.js';
+import exportRoutes from './api/routes/export.js'; // <-- Added Day 15
 
 dotenv.config();
 
@@ -39,10 +40,12 @@ const apiLimiter = rateLimit({
 // Apply rate limiter to all API routes
 app.use('/api/', apiLimiter);
 
+// Note: Body parsers are not strictly needed for the multipart export route 
+// but are kept for all other JSON/URL-encoded routes
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging
+// Request logging middleware
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`);
   next();
@@ -55,6 +58,7 @@ app.use('/api/image', imageRoutes);
 app.use('/api/color', colorRoutes);
 app.use('/api/orchestrator', orchestratorRoutes);
 app.use('/api/validate', validateRoutes);
+app.use('/api/export', exportRoutes); // <-- Added Day 15
 
 // Health check
 app.get('/health', async (req, res) => {
