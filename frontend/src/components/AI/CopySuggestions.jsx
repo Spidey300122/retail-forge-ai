@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Loader, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useCanvasStore from '../../store/canvasStore';
+import useAIStore from '../../store/aiStore'; // Import the store
 import { fabric } from 'fabric';
 import './CopySuggestions.css';
 
 function CopySuggestions() {
   const { canvas } = useCanvasStore();
+  
+  // Use the global AI store for persistence
+  const { generatedCopy, setGeneratedCopy } = useAIStore();
+
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
@@ -16,6 +21,13 @@ function CopySuggestions() {
   const [category, setCategory] = useState('beverages');
   const [features, setFeatures] = useState('');
   const [style, setStyle] = useState('energetic');
+
+  // Sync with store on load
+  useEffect(() => {
+    if (generatedCopy && generatedCopy.length > 0) {
+      setSuggestions(generatedCopy);
+    }
+  }, [generatedCopy]);
 
   const categories = [
     { value: 'beverages', label: 'Beverages' },
@@ -62,9 +74,14 @@ function CopySuggestions() {
       const data = await response.json();
 
       if (data.success) {
-        setSuggestions(data.data.suggestions || []);
+        const newSuggestions = data.data.suggestions || [];
+        setSuggestions(newSuggestions);
+        
+        // SAVE TO STORE (Persistence)
+        setGeneratedCopy(newSuggestions);
+
         setSelectedIndex(null);
-        toast.success(`✨ Generated ${data.data.suggestions.length} copy options!`, {
+        toast.success(`✨ Generated ${newSuggestions.length} copy options!`, {
           id: loadingToast
         });
       } else {

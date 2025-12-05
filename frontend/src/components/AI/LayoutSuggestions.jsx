@@ -9,7 +9,8 @@ import './LayoutSuggestions.css';
 
 function LayoutSuggestions() {
   const { canvas } = useCanvasStore();
-  const { generatedLayouts } = useAIStore(); // Get layouts from store
+  // Updated: Get setGeneratedLayouts from the store to save data
+  const { generatedLayouts, setGeneratedLayouts } = useAIStore(); 
   
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -64,8 +65,15 @@ function LayoutSuggestions() {
       const data = await response.json();
 
       if (data.success) {
-        setSuggestions(data.data.suggestions.layouts || []);
-        toast.success(`✨ Generated ${data.data.suggestions.layouts.length} layouts!`, {
+        const newLayouts = data.data.suggestions.layouts || [];
+        
+        // Update local state to show immediately
+        setSuggestions(newLayouts);
+        
+        // Save to global store so it persists across tabs
+        setGeneratedLayouts(newLayouts); 
+
+        toast.success(`✨ Generated ${newLayouts.length} layouts!`, {
           id: loadingToast
         });
       } else {
@@ -86,20 +94,27 @@ function LayoutSuggestions() {
     }
 
     try {
-      // Clear canvas
-      canvas.clear();
-      canvas.backgroundColor = '#ffffff';
-
-      // Apply layout elements
       const elements = layout.elements;
 
-      // Add product image placeholder or real image
-      const imageUrlToUse = productImageUrl || "https://placehold.co/600x600?text=Product";
+      // 1. Find your existing product image on the canvas
+      const existingImage = canvas.getObjects().find(obj => obj.type === 'image');
 
-      if (elements.product) {
+      if (existingImage && elements.product) {
+        // Move YOUR existing image to the suggested position
+        existingImage.set({
+          left: elements.product.x,
+          top: elements.product.y,
+          originX: 'center',
+          originY: 'center',
+          scaleX: elements.product.width / existingImage.width,
+          scaleY: elements.product.height / existingImage.height
+        });
+        existingImage.setCoords();
+      } else if (elements.product) {
+        // Fallback: If canvas is empty, load the URL/placeholder
+        const imageUrlToUse = productImageUrl || "https://placehold.co/600x600?text=Product";
         fabric.Image.fromURL(imageUrlToUse, (img) => {
           if (!img) return;
-          
           img.set({
             left: elements.product.x,
             top: elements.product.y,
@@ -113,21 +128,37 @@ function LayoutSuggestions() {
         }, { crossOrigin: 'anonymous' });
       }
 
-      // Add headline text
+      // 2. Handle Headline (Update existing text or add new)
       if (elements.headline) {
-        const headline = new fabric.IText('Your Headline Here', {
-          left: elements.headline.x,
-          top: elements.headline.y,
-          fontSize: elements.headline.fontSize || 48,
-          fontWeight: 'bold',
-          fill: '#000000',
-          originX: elements.headline.align === 'center' ? 'center' : 'left',
-          originY: 'center'
-        });
-        canvas.add(headline);
+        // Find the first text object to act as the headline
+        const existingText = canvas.getObjects().find(obj => obj.type === 'i-text' || obj.type === 'text');
+        
+        if (existingText) {
+            existingText.set({
+                left: elements.headline.x,
+                top: elements.headline.y,
+                // Use suggested size or keep reasonable default
+                fontSize: elements.headline.fontSize || 48,
+                originX: elements.headline.align === 'center' ? 'center' : 'left',
+                originY: 'center'
+            });
+            existingText.setCoords();
+        } else {
+            // Create new text if none exists
+            const headline = new fabric.IText('Your Headline Here', {
+              left: elements.headline.x,
+              top: elements.headline.y,
+              fontSize: elements.headline.fontSize || 48,
+              fontWeight: 'bold',
+              fill: '#000000',
+              originX: elements.headline.align === 'center' ? 'center' : 'left',
+              originY: 'center'
+            });
+            canvas.add(headline);
+        }
       }
 
-      // Add logo placeholder
+      // 3. Add logo placeholder (Optional - preserves existing objects now)
       if (elements.logo) {
         const logoRect = new fabric.Rect({
           left: elements.logo.x,
@@ -155,7 +186,7 @@ function LayoutSuggestions() {
 
       canvas.renderAll();
       setSelectedLayout(layout);
-      toast.success(`Applied "${layout.name}" layout`);
+      toast.success(`Applied "${layout.name}" layout to your elements`);
     } catch (error) {
       console.error('Failed to apply layout:', error);
       toast.error('Failed to apply layout');
