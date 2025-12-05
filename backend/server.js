@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
 import logger from './utils/logger.js';
 import db from './config/database.js';
 import redis from './config/redis.js';
@@ -11,30 +12,49 @@ import colorRoutes from './api/routes/color.js';
 import orchestratorRoutes from './api/routes/orchestrator.js';
 import validateRoutes from './api/routes/validate.js';
 
-
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors({
+// Security: Strict CORS configuration
+const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+
+// Security: Rate Limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { success: false, error: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiter to all API routes
+app.use('/api/', apiLimiter);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-
-app.use('/api/ai', aiRoutes);
-app.use('/api/image', imageRoutes);
-app.use('/api/color', colorRoutes);
 
 // Request logging
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`);
   next();
 });
+
+// Routes
+app.use('/api/upload', uploadRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/image', imageRoutes);
+app.use('/api/color', colorRoutes);
+app.use('/api/orchestrator', orchestratorRoutes);
+app.use('/api/validate', validateRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {
@@ -60,10 +80,8 @@ app.get('/health', async (req, res) => {
     });
   }
 });
-app.use('/api/upload', uploadRoutes);
-app.use('/api/orchestrator', orchestratorRoutes);
-app.use('/api/validate', validateRoutes);
-// API routes (will add later)
+
+// Simple Test route
 app.get('/api/test', (req, res) => {
   res.json({ 
     message: 'API is working!',
@@ -77,7 +95,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     error: {
-      message: err.message,
+      message: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     }
   });
@@ -93,13 +111,10 @@ app.use((req, res) => {
   });
 });
 
-// ... existing imports and code ...
-
-// Start server with DB Check
+// Start server
 const startServer = async () => {
   try {
-    // 1. Force a Test Connection to Postgres
-    // This triggers the pool.on('connect') event in your database.js
+    // Force a Test Connection to Postgres
     await db.query('SELECT 1'); 
     console.log('✅ Database connection verified');
 
@@ -111,10 +126,8 @@ const startServer = async () => {
   } catch (error) {
     logger.error('❌ Failed to connect to the database:', error);
     
-    // Detailed error logging to help you debug
     if (error.message.includes('password')) {
       console.error('👉 TIP: Check your .env file. Ensure DATABASE_URL is set correctly.');
-      console.error('👉 TIP: Check config/database.js. If using "password:", make sure it is wrapped in quotes.');
     }
     process.exit(1);
   }

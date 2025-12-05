@@ -25,7 +25,6 @@ export async function removeBackground(req, res) {
       method: req.body.method || 'sam'
     });
 
-    // Forward to Python image service
     const formData = new FormData();
     formData.append('file', createReadStream(req.file.path), req.file.originalname);
     formData.append('method', req.body.method || 'sam');
@@ -35,20 +34,17 @@ export async function removeBackground(req, res) {
       formData,
       {
         headers: formData.getHeaders(),
-        timeout: 1200000, // 120 second timeout (SAM is slow)
+        timeout: 1200000, // 120 second timeout
         maxContentLength: Infinity,
         maxBodyLength: Infinity
       }
     );
 
-    // Get the processed file URL
     const downloadUrl = `${IMAGE_SERVICE_URL}${response.data.download_url}`;
-    
     const processingTime = Date.now() - startTime;
     
     logger.info('Background removed successfully', {
       fileId: response.data.file_id,
-      method: req.body.method || 'sam',
       processingTimeMs: processingTime
     });
 
@@ -62,12 +58,10 @@ export async function removeBackground(req, res) {
     });
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    
     logger.error('Background removal failed', {
       error: error.message,
       processingTimeMs: processingTime
     });
-    
     res.status(500).json({
       success: false,
       error: { 
@@ -168,6 +162,60 @@ export async function optimizeImage(req, res) {
     res.status(500).json({
       success: false,
       error: { message: error.response?.data?.detail || error.message }
+    });
+  }
+}
+
+/**
+ * Generate Background (New - Proxy to Python Service)
+ */
+export async function generateBackground(req, res) {
+  const startTime = Date.now();
+  try {
+    const { prompt, style, width, height } = req.body;
+    
+    if (!prompt) {
+      return res.status(400).json({ success: false, error: { message: 'Prompt is required' } });
+    }
+
+    logger.info('Generating background via Python service', { prompt, style });
+
+    // Forward as form-data since Python endpoint expects it
+    const formData = new FormData();
+    formData.append('prompt', prompt);
+    formData.append('style', style || 'professional');
+    formData.append('width', width || 1024);
+    formData.append('height', height || 1024);
+
+    const response = await axios.post(
+      `${IMAGE_SERVICE_URL}/process/generate-background`,
+      formData,
+      {
+        headers: formData.getHeaders(),
+        timeout: 60000 // 60s timeout
+      }
+    );
+
+    const processingTime = Date.now() - startTime;
+    
+    // Proxy the response back
+    // NOTE: download_url in response is relative to python service. 
+    // In a real deploy, we'd rewrite it. For local dev, we assume client can reach localhost:8000
+    // or we should really proxy the download too.
+    
+    res.json({
+      success: true,
+      data: response.data,
+      processingTimeMs: processingTime
+    });
+
+  } catch (error) {
+    logger.error('Background generation failed', error);
+    res.status(500).json({
+      success: false,
+      error: { 
+        message: error.response?.data?.detail || error.message 
+      }
     });
   }
 }

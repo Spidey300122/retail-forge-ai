@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   AlertCircle, 
   CheckCircle, 
@@ -20,46 +20,23 @@ function ValidationPanel() {
   const [autoValidate, setAutoValidate] = useState(true);
   const [highlightedElements, setHighlightedElements] = useState([]);
   const [expandedViolations, setExpandedViolations] = useState(new Set());
+  
+  // Refs for race condition handling
+  const latestRequestRef = useRef(0);
+  const abortControllerRef = useRef(null);
+  const timeoutRef = useRef(null);
 
-  // Auto-validate when canvas changes
-  useEffect(() => {
-    if (!canvas || !autoValidate) return;
-
-    const handleModified = () => {
-      // Debounce validation
-      const timeout = setTimeout(() => {
-        validateCreative();
-      }, 1000);
-
-      return () => clearTimeout(timeout);
-    };
-
-    canvas.on('object:modified', handleModified);
-    canvas.on('object:added', handleModified);
-    canvas.on('object:removed', handleModified);
-
-    return () => {
-      canvas.off('object:modified', handleModified);
-      canvas.off('object:added', handleModified);
-      canvas.off('object:removed', handleModified);
-    };
-  }, [canvas, autoValidate]);
-
-  const extractCreativeData = () => {
+  const extractCreativeData = useCallback(() => {
     if (!canvas) return null;
 
     const objects = canvas.getObjects();
     
-    // Extract all text content
     const textElements = objects.filter(obj => 
       obj.type === 'i-text' || obj.type === 'text'
     );
     
-    const allText = textElements
-      .map(obj => obj.text)
-      .join(' ');
+    const allText = textElements.map(obj => obj.text).join(' ');
 
-    // Find headline and subhead (largest text elements)
     const sortedBySize = [...textElements].sort((a, b) => 
       (b.fontSize || 16) - (a.fontSize || 16)
     );
@@ -85,42 +62,83 @@ function ValidationPanel() {
       category: 'general',
       isAlcohol: false,
     };
-  };
+  }, [canvas]);
 
-  const validateCreative = async () => {
+  const validateCreative = useCallback(async () => {
     if (!canvas) return;
 
+    // Cancel previous running request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
+    const requestId = ++latestRequestRef.current;
     setIsValidating(true);
 
     try {
       const creativeData = extractCreativeData();
-
+      
       const response = await fetch('http://localhost:3000/api/validate/creative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ creativeData })
+        body: JSON.stringify({ creativeData }),
+        signal: abortController.signal
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        setValidationResults(data.data);
-        console.log('✅ Validation complete:', data.data);
-      } else {
-        throw new Error(data.error?.message || 'Validation failed');
+      // Only update state if this is still the latest request
+      if (requestId === latestRequestRef.current) {
+        if (data.success) {
+          setValidationResults(data.data);
+          console.log('✅ Validation complete:', data.data);
+        } else {
+          throw new Error(data.error?.message || 'Validation failed');
+        }
       }
     } catch (error) {
-      console.error('Validation error:', error);
-      toast.error('Failed to validate creative');
+      if (error.name !== 'AbortError') {
+        console.error('Validation error:', error);
+        toast.error('Failed to validate creative');
+      }
     } finally {
-      setIsValidating(false);
+      if (requestId === latestRequestRef.current) {
+        setIsValidating(false);
+      }
     }
-  };
+  }, [canvas, extractCreativeData]);
+
+  // Debounced Auto-validation
+  useEffect(() => {
+    if (!canvas || !autoValidate) return;
+
+    const handleModified = () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      
+      // Wait 1.5s after last change before validating
+      timeoutRef.current = setTimeout(() => {
+        validateCreative();
+      }, 1500);
+    };
+
+    canvas.on('object:modified', handleModified);
+    canvas.on('object:added', handleModified);
+    canvas.on('object:removed', handleModified);
+
+    return () => {
+      canvas.off('object:modified', handleModified);
+      canvas.off('object:added', handleModified);
+      canvas.off('object:removed', handleModified);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [canvas, autoValidate, validateCreative]);
 
   const handleHighlightViolation = (violation) => {
     if (!canvas || !violation.affectedElements) return;
 
-    // Clear previous highlights
     clearHighlights();
 
     const objects = canvas.getObjects();
@@ -131,13 +149,11 @@ function ValidationPanel() {
       const obj = objects[elementIndex];
 
       if (obj) {
-        // Store original properties
         const original = {
           stroke: obj.stroke,
           strokeWidth: obj.strokeWidth,
         };
 
-        // Apply highlight
         obj.set({
           stroke: '#ef4444',
           strokeWidth: 3,
@@ -150,7 +166,6 @@ function ValidationPanel() {
     setHighlightedElements(newHighlights);
     canvas.renderAll();
 
-    // Auto-clear after 5 seconds
     setTimeout(clearHighlights, 5000);
   };
 
@@ -165,7 +180,6 @@ function ValidationPanel() {
   const handleApplyFix = async (violation) => {
     if (!canvas) return;
 
-    // Handle different violation types
     switch (violation.ruleId) {
       case 'min_font_size':
         applyFontSizeFix(violation);
@@ -195,11 +209,10 @@ function ValidationPanel() {
 
     canvas.renderAll();
     toast.success(`Fixed ${fixed} text element(s)`);
-    validateCreative(); // Re-validate
+    validateCreative();
   };
 
   const applyContrastFix = (violation) => {
-    // Simple fix: change text to black or white based on background
     const objects = canvas.getObjects();
     const bgColor = canvas.backgroundColor || '#ffffff';
     const bgBrightness = getColorBrightness(bgColor);
@@ -223,7 +236,8 @@ function ValidationPanel() {
   };
 
   const getColorBrightness = (hex) => {
-    const rgb = parseInt(hex.slice(1), 16);
+    if (!hex) return 255;
+    const rgb = parseInt(hex.replace('#', ''), 16);
     const r = (rgb >> 16) & 0xff;
     const g = (rgb >> 8) & 0xff;
     const b = rgb & 0xff;
@@ -264,7 +278,6 @@ function ValidationPanel() {
 
   return (
     <div className="validation-panel">
-      {/* Header */}
       <div className="validation-header">
         <div className="header-title">
           <Shield size={20} />
@@ -291,18 +304,15 @@ function ValidationPanel() {
         </div>
       </div>
 
-      {/* Loading State */}
       {isValidating && (
         <div className="validation-loading">
           <RefreshCw size={24} className="animate-spin" />
-          <p>Validating against {validationResults?.rulesChecked || 15} rules...</p>
+          <p>Validating against rules...</p>
         </div>
       )}
 
-      {/* Results */}
       {!isValidating && validationResults && (
         <div className="validation-results">
-          {/* Score Badge */}
           <div className={`score-badge ${validationResults.isCompliant ? 'compliant' : 'non-compliant'}`}>
             <div className="score-icon">
               {validationResults.isCompliant ? (
@@ -324,7 +334,6 @@ function ValidationPanel() {
             </div>
           </div>
 
-          {/* Violations */}
           {validationResults.violations.length > 0 && (
             <div className="violations-section">
               <h4 className="section-title">
@@ -396,7 +405,6 @@ function ValidationPanel() {
             </div>
           )}
 
-          {/* Warnings */}
           {validationResults.warnings.length > 0 && (
             <div className="warnings-section">
               <h4 className="section-title">
@@ -418,7 +426,6 @@ function ValidationPanel() {
             </div>
           )}
 
-          {/* Success State */}
           {validationResults.isCompliant && validationResults.violations.length === 0 && (
             <div className="success-state">
               <CheckCircle size={48} className="success-icon" />
@@ -429,7 +436,6 @@ function ValidationPanel() {
         </div>
       )}
 
-      {/* Empty State */}
       {!isValidating && !validationResults && (
         <div className="validation-empty">
           <Shield size={48} className="empty-icon" />

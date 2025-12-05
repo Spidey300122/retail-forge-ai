@@ -1,4 +1,3 @@
-// frontend/src/components/AI/BackgroundGenerator.jsx
 import { useState } from 'react';
 import { Sparkles, Loader, Image as ImageIcon, Download, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -56,21 +55,29 @@ function BackgroundGenerator() {
         toast.loading('Almost there...', { id: loadingToast });
       }, 8000);
 
-      const formData = new FormData();
-      formData.append('prompt', prompt);
-      formData.append('style', style);
-      formData.append('width', 1080);
-      formData.append('height', 1080);
-
-      const response = await fetch('http://localhost:8000/process/generate-background', {
+      // Changed to use Node Backend API instead of Python direct access
+      const response = await fetch('http://localhost:3000/api/image/generate-background', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          style,
+          width: 1080,
+          height: 1080
+        }),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (data.success) {
-        const downloadUrl = `http://localhost:8000${data.download_url}`;
+      if (result.success) {
+        const data = result.data || result; // Handle wrapping
+        
+        // Fix URL if needed
+        const downloadUrl = data.download_url.startsWith('http') 
+          ? data.download_url 
+          : `http://localhost:8000${data.download_url}`; 
         
         const newImage = {
           id: data.file_id,
@@ -85,21 +92,15 @@ function BackgroundGenerator() {
         setSelectedImage(newImage);
         
         toast.success('✨ Background generated!', { id: loadingToast });
-        
-        console.log('🎨 Background generated:', newImage);
       } else {
-        throw new Error(data.error || 'Failed to generate background');
+        throw new Error(result.error?.message || 'Failed to generate background');
       }
     } catch (error) {
       console.error('Background generation failed:', error);
-      
       let errorMessage = 'Failed to generate background';
       if (error.message.includes('filtered')) {
         errorMessage = '🔒 Content filtered. Try a different description.';
-      } else if (error.message.includes('timeout')) {
-        errorMessage = '⏱️ Generation timed out. Please try again.';
       }
-      
       toast.error(errorMessage, { id: loadingToast });
     } finally {
       setIsGenerating(false);
@@ -115,7 +116,6 @@ function BackgroundGenerator() {
     fabric.Image.fromURL(
       image.url,
       (img) => {
-        // Scale to fit canvas
         const scale = Math.min(
           canvas.width / img.width,
           canvas.height / img.height
@@ -130,13 +130,11 @@ function BackgroundGenerator() {
           evented: false,
         });
 
-        // Send to back
         canvas.add(img);
         canvas.sendToBack(img);
         canvas.renderAll();
 
         toast.success('Background applied to canvas');
-        console.log('✅ Background applied');
       },
       { crossOrigin: 'anonymous' }
     );
@@ -192,7 +190,6 @@ function BackgroundGenerator() {
         </p>
       </div>
 
-      {/* Input Form */}
       <div className="generator-form">
         <div className="form-group">
           <label className="form-label">Describe Your Background</label>
@@ -253,7 +250,6 @@ function BackgroundGenerator() {
         </button>
       </div>
 
-      {/* Generated Images Gallery */}
       {generatedImages.length > 0 && (
         <div className="generated-gallery">
           <h4 className="gallery-title">Generated Backgrounds</h4>
@@ -319,7 +315,6 @@ function BackgroundGenerator() {
         </div>
       )}
 
-      {/* Empty State */}
       {generatedImages.length === 0 && !isGenerating && (
         <div className="generator-empty">
           <Sparkles size={48} className="empty-icon" />

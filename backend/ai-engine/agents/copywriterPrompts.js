@@ -60,6 +60,12 @@ CATEGORY FOCUS:
 - Focus on: ${categoryGuide.focus || 'benefits and appeal'}
 - Avoid: ${categoryGuide.avoid || 'unsubstantiated claims'}
 
+STRICT COPYRIGHT RULES (MUST FOLLOW):
+1. DO NOT use slogans, taglines, or phrases associated with other existing brands (e.g., "Just Do It", "I'm Lovin' It", "Think Different").
+2. DO NOT reference copyrighted characters, movies, songs, or pop culture properties.
+3. Ensure all copy is original and generic enough for retail use.
+4. If the product itself is a known brand, only use public factual information.
+
 COMPLIANCE RULES (CRITICAL):
 1. NO terms and conditions text (no "T&Cs apply", "conditions apply")
 2. NO competition language (no "win", "enter", "prize")

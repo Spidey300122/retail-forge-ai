@@ -38,11 +38,15 @@ export async function suggestLayouts(productImageUrl, category, style = 'modern'
       model: "gpt-4o",
       messages: [
         {
+          role: "system",
+          content: "You are a creative director for retail media campaigns. STRICT COPYRIGHT COMPLIANCE: Do not suggest or generate designs that use existing brand logos (other than the user's own), trademarked characters (e.g., Marvel, Disney), or copyrighted artwork. All design elements must be generic or original. If the product image implies a specific brand, do not replicate its protected assets in your layout recommendations."
+        },
+        {
           role: "user",
           content: [
             {
               type: "text",
-              text: `You are a creative director for retail media campaigns. Analyze this ${category} product image and suggest 3 layout options for a 1080x1080px Instagram post in ${style} style.
+              text: `Analyze this ${category} product image and suggest 3 layout options for a 1080x1080px Instagram post in ${style} style.
 
 For each layout, provide:
 1. A descriptive name
@@ -71,7 +75,7 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
               type: "image_url",
               image_url: { 
                 url: productImageUrl,
-                detail: "low" // Changed to low to reduce token usage and potential safety triggers
+                detail: "low" 
               }
             }
           ]
@@ -83,7 +87,6 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
     
     const choice = response.choices[0];
     
-    // Check for safety refusals
     if (choice.message.refusal) {
         logger.warn('AI refused request', { refusal: choice.message.refusal });
         throw new Error(`AI Refusal: ${choice.message.refusal}`);
@@ -97,13 +100,11 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
         throw new Error(`AI returned empty response (Reason: ${finishReason})`);
     }
 
-    // Handled text-based refusal that GPT-4 sometimes returns in 'content'
     if (rawText.includes("I'm sorry") || rawText.includes("I cannot assist")) {
        logger.warn('AI refused request in content', { rawText });
-       throw new Error("AI refused to process this specific image. Please try a different product image.");
+       throw new Error("AI refused to process this specific image.");
     }
 
-    // Clean potential markdown wrappers
     rawText = cleanJsonString(rawText);
     
     let suggestions;
@@ -114,7 +115,6 @@ Position coordinates are from top-left corner. Canvas is 1080x1080px.`
       throw new Error('Invalid JSON response from AI');
     }
     
-    // Robust validation
     if (!suggestions || !suggestions.layouts || !Array.isArray(suggestions.layouts)) {
       logger.warn('Invalid layout response structure', { parsed: suggestions });
       throw new Error('Invalid layout response structure');
