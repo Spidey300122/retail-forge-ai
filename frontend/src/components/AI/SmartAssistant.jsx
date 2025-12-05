@@ -2,15 +2,31 @@
 import { useState } from 'react';
 import { Sparkles, Loader, MessageSquare, Lightbulb, CheckCircle, AlertCircle } from 'lucide-react';
 import useOrchestrator from '../../hooks/useOrchestrator';
-import useAIStore from '../../store/aiStore'; // Import the store
+import useAIStore from '../../store/aiStore';
 import toast from 'react-hot-toast';
 
 function SmartAssistant() {
-  const { processRequest, isProcessing, results } = useOrchestrator();
-  const [userInput, setUserInput] = useState('');
+  const { processRequest, isProcessing } = useOrchestrator();
   
-  // Get setters from the store
-  const { setGeneratedLayouts, setGeneratedCopy } = useAIStore();
+  // Access global store state and setters
+  const { 
+    assistantInput, 
+    setAssistantInput, 
+    assistantResults, 
+    setAssistantResults,
+    setGeneratedLayouts, 
+    setGeneratedCopy 
+  } = useAIStore();
+
+  // Local state for input field to keep typing responsive
+  const [localInput, setLocalInput] = useState(assistantInput);
+
+  // Sync local input change to store
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setLocalInput(val);
+    setAssistantInput(val);
+  };
 
   const examplePrompts = [
     'Create a modern layout for an orange juice product',
@@ -22,34 +38,50 @@ function SmartAssistant() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!userInput.trim()) {
+    if (!localInput.trim()) {
       toast.error('Please enter a request');
       return;
     }
 
     try {
       // Process the request
-      const data = await processRequest({ userInput });
+      const data = await processRequest({ userInput: localInput });
       
-      // Save results to the store for other tabs to access
+      // 1. Save results to store (Persist the chat response)
+      setAssistantResults(data);
+
+      // 2. Distribute specific assets to other tabs
+      let hasResults = false;
+
       if (data.layouts && data.layouts.length > 0) {
         setGeneratedLayouts(data.layouts);
-        console.log('✅ Layouts saved to store:', data.layouts.length);
+        hasResults = true;
       }
       
       if (data.copy && data.copy.length > 0) {
         setGeneratedCopy(data.copy);
-        console.log('✅ Copy saved to store:', data.copy.length);
+        hasResults = true;
       }
 
-      setUserInput('');
+      if (hasResults) {
+        toast.success('Assets generated! Check Layouts/Copy tabs.', { 
+          icon: '✨',
+          duration: 4000 
+        });
+      }
+
+      // Clear inputs
+      setLocalInput('');
+      setAssistantInput('');
+      
     } catch (error) {
       console.error('Request failed:', error);
     }
   };
 
   const handleExampleClick = (prompt) => {
-    setUserInput(prompt);
+    setLocalInput(prompt);
+    setAssistantInput(prompt);
   };
 
   return (
@@ -75,8 +107,8 @@ function SmartAssistant() {
       {/* Input Form */}
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <textarea
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
+          value={localInput}
+          onChange={handleInputChange}
           placeholder="E.g., Create a modern layout with energetic copy for an orange juice product..."
           rows={4}
           style={{
@@ -92,7 +124,7 @@ function SmartAssistant() {
 
         <button
           type="submit"
-          disabled={isProcessing || !userInput.trim()}
+          disabled={isProcessing || !localInput.trim()}
           style={{
             width: '100%',
             padding: '12px',
@@ -125,48 +157,50 @@ function SmartAssistant() {
       </form>
 
       {/* Example Prompts */}
-      <div>
-        <label style={{ 
-          fontSize: '12px', 
-          color: '#6b7280', 
-          fontWeight: '500', 
-          marginBottom: '8px', 
-          display: 'block' 
-        }}>
-          Try these examples:
-        </label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {examplePrompts.map((prompt, index) => (
-            <button
-              key={index}
-              onClick={() => handleExampleClick(prompt)}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#f3f4f6',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                fontSize: '12px',
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#e0e7ff';
-                e.target.style.borderColor = '#8b5cf6';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#f3f4f6';
-                e.target.style.borderColor = '#e5e7eb';
-              }}
-            >
-              {prompt}
-            </button>
-          ))}
+      {!assistantResults && (
+        <div>
+          <label style={{ 
+            fontSize: '12px', 
+            color: '#6b7280', 
+            fontWeight: '500', 
+            marginBottom: '8px', 
+            display: 'block' 
+          }}>
+            Try these examples:
+          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {examplePrompts.map((prompt, index) => (
+              <button
+                key={index}
+                onClick={() => handleExampleClick(prompt)}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#e0e7ff';
+                  e.target.style.borderColor = '#8b5cf6';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#f3f4f6';
+                  e.target.style.borderColor = '#e5e7eb';
+                }}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Results Display */}
-      {results && (
+      {/* Results Display (using store variable assistantResults) */}
+      {assistantResults && (
         <div style={{ 
           marginTop: '20px', 
           padding: '16px', 
@@ -188,7 +222,7 @@ function SmartAssistant() {
           </h4>
 
           {/* Recommendations */}
-          {results.recommendations && results.recommendations.length > 0 && (
+          {assistantResults.recommendations && assistantResults.recommendations.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
               <p style={{ 
                 fontSize: '12px', 
@@ -196,9 +230,9 @@ function SmartAssistant() {
                 color: '#6b7280', 
                 marginBottom: '8px' 
               }}>
-                Recommendations:
+                Analysis:
               </p>
-              {results.recommendations.map((rec, index) => (
+              {assistantResults.recommendations.map((rec, index) => (
                 <div
                   key={index}
                   style={{
@@ -213,13 +247,13 @@ function SmartAssistant() {
                     gap: '8px'
                   }}
                 >
-                  {rec.type === 'warning' ? (
+                  {rec.type === 'warning' || rec.type === 'info' ? (
                     <AlertCircle size={16} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
                   ) : (
                     <CheckCircle size={16} color="#10b981" style={{ flexShrink: 0, marginTop: '2px' }} />
                   )}
                   <div style={{ flex: 1 }}>
-                    <strong style={{ color: '#1f2937' }}>{rec.type}:</strong>{' '}
+                    <strong style={{ color: '#1f2937', textTransform: 'capitalize' }}>{rec.type}:</strong>{' '}
                     <span style={{ color: '#4b5563' }}>{rec.message}</span>
                   </div>
                 </div>
@@ -227,8 +261,8 @@ function SmartAssistant() {
             </div>
           )}
 
-          {/* Layouts */}
-          {results.layouts && results.layouts.length > 0 && (
+          {/* Layouts Summary */}
+          {assistantResults.layouts && assistantResults.layouts.length > 0 && (
             <div style={{ 
               marginBottom: '16px',
               padding: '12px',
@@ -245,16 +279,16 @@ function SmartAssistant() {
                 gap: '6px'
               }}>
                 <CheckCircle size={14} />
-                Generated {results.layouts.length} layout option{results.layouts.length > 1 ? 's' : ''}
+                Generated {assistantResults.layouts.length} layout option{assistantResults.layouts.length > 1 ? 's' : ''}
               </p>
               <p style={{ fontSize: '11px', color: '#3b82f6', marginTop: '4px' }}>
-                Check the "Layouts" tab to view and apply them
+                Switch to "Layouts" tab to apply them
               </p>
             </div>
           )}
 
-          {/* Copy */}
-          {results.copy && results.copy.length > 0 && (
+          {/* Copy Summary */}
+          {assistantResults.copy && assistantResults.copy.length > 0 && (
             <div style={{ 
               marginBottom: '16px',
               padding: '12px',
@@ -271,42 +305,10 @@ function SmartAssistant() {
                 gap: '6px'
               }}>
                 <CheckCircle size={14} />
-                Generated {results.copy.length} copy variation{results.copy.length > 1 ? 's' : ''}
+                Generated {assistantResults.copy.length} copy variation{assistantResults.copy.length > 1 ? 's' : ''}
               </p>
               <p style={{ fontSize: '11px', color: '#16a34a', marginTop: '4px' }}>
-                Check the "Copy" tab to view and use them
-              </p>
-            </div>
-          )}
-
-          {/* Compliance */}
-          {results.compliance && (
-            <div style={{
-              marginBottom: '16px',
-              padding: '12px',
-              backgroundColor: results.compliance.isCompliant ? '#f0fdf4' : '#fef2f2',
-              borderRadius: '6px',
-              border: results.compliance.isCompliant ? '1px solid #bbf7d0' : '1px solid #fecaca'
-            }}>
-              <p style={{ 
-                fontSize: '12px', 
-                fontWeight: '600', 
-                color: results.compliance.isCompliant ? '#15803d' : '#dc2626',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                {results.compliance.isCompliant ? (
-                  <>
-                    <CheckCircle size={14} />
-                    All compliance checks passed
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle size={14} />
-                    {results.compliance.violations?.length || 0} compliance issue(s) found
-                  </>
-                )}
+                Switch to "Copy" tab to use them
               </p>
             </div>
           )}
@@ -318,8 +320,25 @@ function SmartAssistant() {
             marginTop: '12px',
             textAlign: 'right'
           }}>
-            Processed in {results.processingTimeMs}ms
+            Processed in {assistantResults.processingTimeMs}ms
           </p>
+          
+          <button 
+             onClick={() => setAssistantResults(null)}
+             style={{
+               width: '100%',
+               marginTop: '8px',
+               padding: '6px',
+               fontSize: '11px',
+               color: '#6b7280',
+               border: '1px solid #e5e7eb',
+               backgroundColor: 'white',
+               borderRadius: '4px',
+               cursor: 'pointer'
+             }}
+          >
+            Clear Results
+          </button>
         </div>
       )}
     </div>

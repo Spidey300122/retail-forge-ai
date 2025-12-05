@@ -22,15 +22,30 @@ class AIOrchestrator {
     try {
       logger.info('Analyzing user intent', { input: userInput });
 
-      // Simple keyword-based intent detection
+      // IMPROVED: Broader keyword matching to catch natural language requests
       const intent = {
-        needsLayout: /layout|design|arrange|position/i.test(userInput),
-        needsCopy: /copy|text|headline|write|content/i.test(userInput),
-        needsBackground: /background|backdrop|bg/i.test(userInput),
-        needsCompliance: /check|validate|compliant|rules/i.test(userInput),
+        // Added: create, generate, make, build, banner, post, creative, instagram, facebook
+        needsLayout: /layout|design|arrange|position|create|generate|make|build|banner|post|story|creative|instagram|facebook/i.test(userInput),
+        
+        // Added: caption, slogan, tagline, description, message
+        needsCopy: /copy|text|headline|write|content|caption|slogan|tagline|description|message/i.test(userInput),
+        
+        // Added: scene, environment
+        needsBackground: /background|backdrop|bg|scene|environment/i.test(userInput),
+        
+        // Added: safe
+        needsCompliance: /check|validate|compliant|rules|safe/i.test(userInput),
+        
         category: this.detectCategory(userInput),
         style: this.detectStyle(userInput),
       };
+
+      // Fallback: If nothing specific detected but input exists, assume they want a layout
+      // This fixes the "instant empty response" for generic queries
+      if (!intent.needsLayout && !intent.needsCopy && !intent.needsBackground && userInput.length > 5) {
+        logger.info('No specific intent keywords detected, defaulting to layout generation');
+        intent.needsLayout = true;
+      }
 
       logger.info('Intent analyzed', intent);
       return intent;
@@ -97,17 +112,20 @@ class AIOrchestrator {
       results.intent = await this.analyzeIntent(request.userInput || '');
 
       // Step 2: Generate layouts if needed
-      if (results.intent.needsLayout && request.productImageUrl) {
+      if (results.intent.needsLayout) {
+        // Use provided image or fallback to placeholder if missing (prevents crashing)
+        const imageUrl = request.productImageUrl || "https://placehold.co/600x600?text=Product";
+        
         try {
           const layoutResult = await creativeDirector.suggestLayouts(
-            request.productImageUrl,
+            imageUrl,
             results.intent.category,
             results.intent.style
           );
           results.layouts = layoutResult.layouts;
           results.recommendations.push({
-            type: 'layout',
-            message: `Generated ${layoutResult.layouts.length} layout options`,
+            type: 'success', // Changed from 'layout' for better UI mapping
+            message: `Generated ${layoutResult.layouts.length} layout options in "Layouts" tab`,
           });
         } catch (error) {
           logger.warn('Layout generation failed', error);
@@ -119,16 +137,22 @@ class AIOrchestrator {
       }
 
       // Step 3: Generate copy if needed
-      if (results.intent.needsCopy && request.productInfo) {
+      if (results.intent.needsCopy) {
+        // Use provided info or sensible defaults
+        const productInfo = request.productInfo || {
+            name: "New Product",
+            category: results.intent.category
+        };
+
         try {
           const copyResult = await complianceOfficer.generateCopy(
-            request.productInfo,
+            productInfo,
             results.intent.style || 'energetic'
           );
           results.copy = copyResult;
           results.recommendations.push({
-            type: 'copy',
-            message: `Generated ${copyResult.length} copy variations`,
+            type: 'success', // Changed from 'copy'
+            message: `Generated ${copyResult.length} copy variations in "Copy" tab`,
           });
         } catch (error) {
           logger.warn('Copy generation failed', error);
@@ -147,14 +171,27 @@ class AIOrchestrator {
           
           if (!complianceResult.isCompliant) {
             results.recommendations.push({
-              type: 'compliance',
+              type: 'warning', // Changed from 'compliance'
               message: `Found ${complianceResult.violations.length} compliance issues`,
               violations: complianceResult.violations,
+            });
+          } else {
+             results.recommendations.push({
+              type: 'success',
+              message: `Compliance check passed`,
             });
           }
         } catch (error) {
           logger.warn('Compliance check failed', error);
         }
+      }
+      
+      // If nothing was generated, add a hint
+      if (results.recommendations.length === 0) {
+         results.recommendations.push({
+            type: 'info',
+            message: 'I understood your request but need more details (like an image or product name) to generate assets.',
+          });
       }
 
       logger.info('Creative request processed', { 
