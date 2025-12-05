@@ -8,14 +8,26 @@ const useAIStore = create((set) => ({
   // Assistant chat persistence
   assistantInput: '',
   assistantResults: null,
+
+  // --- NEW: Persist Copy Tab Form Data ---
+  copyFormData: {
+    productName: '',
+    category: 'beverages',
+    features: '',
+    style: 'energetic'
+  },
   
   // Setters
   setGeneratedLayouts: (layouts) => set({ generatedLayouts: layouts }),
   setGeneratedCopy: (copy) => set({ generatedCopy: copy }),
   
-  // New setters for persistence
   setAssistantInput: (input) => set({ assistantInput: input }),
   setAssistantResults: (results) => set({ assistantResults: results }),
+
+  // --- NEW: Setter for Copy Form ---
+  setCopyFormData: (updates) => set((state) => ({
+    copyFormData: { ...state.copyFormData, ...updates }
+  })),
 }));
 
 export default useAIStore;

@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { Sparkles, Loader, MessageSquare, Lightbulb, CheckCircle, AlertCircle } from 'lucide-react';
 import useOrchestrator from '../../hooks/useOrchestrator';
 import useAIStore from '../../store/aiStore';
+import useCanvasStore from '../../store/canvasStore'; // Import canvas store
 import toast from 'react-hot-toast';
 
 function SmartAssistant() {
   const { processRequest, isProcessing } = useOrchestrator();
+  const { canvas } = useCanvasStore(); // Access the canvas
   
   // Access global store state and setters
   const { 
@@ -18,10 +20,8 @@ function SmartAssistant() {
     setGeneratedCopy 
   } = useAIStore();
 
-  // Local state for input field to keep typing responsive
   const [localInput, setLocalInput] = useState(assistantInput);
 
-  // Sync local input change to store
   const handleInputChange = (e) => {
     const val = e.target.value;
     setLocalInput(val);
@@ -35,6 +35,25 @@ function SmartAssistant() {
     'Suggest improvements for my current design',
   ];
 
+  const getActiveImageFromCanvas = () => {
+    if (!canvas) return null;
+    
+    // 1. Try to get the currently selected object
+    const activeObj = canvas.getActiveObject();
+    if (activeObj && activeObj.type === 'image') {
+      return activeObj.getSrc();
+    }
+
+    // 2. Fallback: Get the first image on the canvas
+    const images = canvas.getObjects('image');
+    if (images.length > 0) {
+      // Use the one with the largest area (likely the main product)
+      return images.sort((a, b) => (b.width * b.scaleX) - (a.width * a.scaleX))[0].getSrc();
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -43,14 +62,29 @@ function SmartAssistant() {
       return;
     }
 
+    // Capture image from canvas
+    const currentImage = getActiveImageFromCanvas();
+    
+    if (!currentImage && localInput.toLowerCase().includes('layout')) {
+      toast('Tip: Add an image to the canvas first for better results!', { icon: '💡' });
+    }
+
     try {
+      // Prepare the request payload
+      const payload = { 
+        userInput: localInput,
+        // Pass the image URL (base64) if we found one
+        productImageUrl: currentImage,
+        // Basic product info inferred from input can be added here if you have a parser, 
+        // but for now we rely on the orchestrator's intent analysis.
+      };
+
       // Process the request
-      const data = await processRequest({ userInput: localInput });
+      const data = await processRequest(payload);
       
-      // 1. Save results to store (Persist the chat response)
       setAssistantResults(data);
 
-      // 2. Distribute specific assets to other tabs
+      // Distribute assets to other tabs
       let hasResults = false;
 
       if (data.layouts && data.layouts.length > 0) {
@@ -70,12 +104,12 @@ function SmartAssistant() {
         });
       }
 
-      // Clear inputs
       setLocalInput('');
       setAssistantInput('');
       
     } catch (error) {
       console.error('Request failed:', error);
+      // Error is already toasted by useOrchestrator
     }
   };
 
@@ -109,7 +143,7 @@ function SmartAssistant() {
         <textarea
           value={localInput}
           onChange={handleInputChange}
-          placeholder="E.g., Create a modern layout with energetic copy for an orange juice product..."
+          placeholder="E.g., Create a modern layout with energetic copy for this product..."
           rows={4}
           style={{
             width: '100%',
@@ -199,7 +233,7 @@ function SmartAssistant() {
         </div>
       )}
 
-      {/* Results Display (using store variable assistantResults) */}
+      {/* Results Display */}
       {assistantResults && (
         <div style={{ 
           marginTop: '20px', 
@@ -224,14 +258,6 @@ function SmartAssistant() {
           {/* Recommendations */}
           {assistantResults.recommendations && assistantResults.recommendations.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
-              <p style={{ 
-                fontSize: '12px', 
-                fontWeight: '500', 
-                color: '#6b7280', 
-                marginBottom: '8px' 
-              }}>
-                Analysis:
-              </p>
               {assistantResults.recommendations.map((rec, index) => (
                 <div
                   key={index}

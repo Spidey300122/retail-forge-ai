@@ -2,25 +2,27 @@ import { useState, useEffect } from 'react';
 import { MessageSquare, Loader, Copy, Check, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useCanvasStore from '../../store/canvasStore';
-import useAIStore from '../../store/aiStore'; // Import the store
+import useAIStore from '../../store/aiStore'; 
 import { fabric } from 'fabric';
 import './CopySuggestions.css';
 
 function CopySuggestions() {
   const { canvas } = useCanvasStore();
   
-  // Use the global AI store for persistence
-  const { generatedCopy, setGeneratedCopy } = useAIStore();
+  // 1. Get form data and setters from global store
+  const { 
+    generatedCopy, 
+    setGeneratedCopy,
+    copyFormData,
+    setCopyFormData 
+  } = useAIStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
   
-  // Form state
-  const [productName, setProductName] = useState('');
-  const [category, setCategory] = useState('beverages');
-  const [features, setFeatures] = useState('');
-  const [style, setStyle] = useState('energetic');
+  // REMOVED: Local state variables (productName, category, etc.)
+  // because we now use copyFormData from the store.
 
   // Sync with store on load
   useEffect(() => {
@@ -47,7 +49,8 @@ function CopySuggestions() {
   ];
 
   const handleGenerate = async () => {
-    if (!productName.trim()) {
+    // Use copyFormData instead of local variables
+    if (!copyFormData.productName.trim()) {
       toast.error('Please enter a product name');
       return;
     }
@@ -61,12 +64,12 @@ function CopySuggestions() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productInfo: {
-            name: productName,
-            category: category,
-            features: features.split(',').map(f => f.trim()).filter(Boolean),
+            name: copyFormData.productName,
+            category: copyFormData.category,
+            features: copyFormData.features.split(',').map(f => f.trim()).filter(Boolean),
             audience: 'general consumers'
           },
-          style: style,
+          style: copyFormData.style,
           userId: 1
         })
       });
@@ -131,6 +134,11 @@ function CopySuggestions() {
     toast.success('Copied to clipboard');
   };
 
+  // Helper to update specific form fields in store
+  const updateForm = (field, value) => {
+    setCopyFormData({ [field]: value });
+  };
+
   return (
     <div className="copy-suggestions">
       <div className="suggestions-header">
@@ -151,8 +159,8 @@ function CopySuggestions() {
             type="text"
             className="form-input"
             placeholder="e.g., Fresh Orange Juice"
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
+            value={copyFormData.productName}
+            onChange={(e) => updateForm('productName', e.target.value)}
           />
         </div>
 
@@ -160,8 +168,8 @@ function CopySuggestions() {
           <label className="form-label">Category</label>
           <select
             className="form-select"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            value={copyFormData.category}
+            onChange={(e) => updateForm('category', e.target.value)}
           >
             {categories.map(cat => (
               <option key={cat.value} value={cat.value}>
@@ -177,8 +185,8 @@ function CopySuggestions() {
             type="text"
             className="form-input"
             placeholder="e.g., 100% natural, no sugar, fresh"
-            value={features}
-            onChange={(e) => setFeatures(e.target.value)}
+            value={copyFormData.features}
+            onChange={(e) => updateForm('features', e.target.value)}
           />
         </div>
 
@@ -188,8 +196,8 @@ function CopySuggestions() {
             {styles.map(s => (
               <button
                 key={s.value}
-                onClick={() => setStyle(s.value)}
-                className={`style-btn ${style === s.value ? 'active' : ''}`}
+                onClick={() => updateForm('style', s.value)}
+                className={`style-btn ${copyFormData.style === s.value ? 'active' : ''}`}
               >
                 <span className="style-label">{s.label}</span>
                 <span className="style-desc">{s.desc}</span>
@@ -217,6 +225,7 @@ function CopySuggestions() {
         </button>
       </div>
 
+      {/* ... (Rest of the UI for Loading State and Suggestions remains the same) ... */}
       {/* Loading State */}
       {isLoading && (
         <div className="suggestions-loading">
