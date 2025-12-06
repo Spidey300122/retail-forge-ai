@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
 import toast from 'react-hot-toast';
+import { debounce } from '../../utils/performanceUtils'; // Day 18 Optimization
 import './ValidationPanel.css';
 
 function ValidationPanel() {
@@ -24,7 +25,6 @@ function ValidationPanel() {
   // Refs for race condition handling
   const latestRequestRef = useRef(0);
   const abortControllerRef = useRef(null);
-  const timeoutRef = useRef(null);
 
   const extractCreativeData = useCallback(() => {
     if (!canvas) return null;
@@ -81,6 +81,7 @@ function ValidationPanel() {
     try {
       const creativeData = extractCreativeData();
       
+      // NOTE: In production, swap 'localhost' for your env variable
       const response = await fetch('http://localhost:3000/api/validate/creative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,26 +103,30 @@ function ValidationPanel() {
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('Validation error:', error);
-        toast.error('Failed to validate creative');
+        // Silent fail for auto-validation, only toast if manual
+        if (!autoValidate) toast.error('Failed to validate creative');
       }
     } finally {
       if (requestId === latestRequestRef.current) {
         setIsValidating(false);
       }
     }
-  }, [canvas, extractCreativeData]);
+  }, [canvas, extractCreativeData, autoValidate]);
 
-  // Debounced Auto-validation
+  // Day 18 Optimization: Use shared debounce utility
+  // This creates a stable debounced function that persists across renders
+  const debouncedValidation = useCallback(
+    debounce(() => {
+      validateCreative();
+    }, 1500),
+    [validateCreative]
+  );
+
   useEffect(() => {
     if (!canvas || !autoValidate) return;
 
     const handleModified = () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      
-      // Wait 1.5s after last change before validating
-      timeoutRef.current = setTimeout(() => {
-        validateCreative();
-      }, 1500);
+      debouncedValidation();
     };
 
     canvas.on('object:modified', handleModified);
@@ -132,9 +137,8 @@ function ValidationPanel() {
       canvas.off('object:modified', handleModified);
       canvas.off('object:added', handleModified);
       canvas.off('object:removed', handleModified);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [canvas, autoValidate, validateCreative]);
+  }, [canvas, autoValidate, debouncedValidation]);
 
   const handleHighlightViolation = (violation) => {
     if (!canvas || !violation.affectedElements) return;

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Keyboard, X } from 'lucide-react';
 import { useCanvas } from '../context/CanvasContext';
+import { fabric } from 'fabric';
 
 // Keyboard Shortcuts Help Modal
-export const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
+const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const shortcuts = [
@@ -100,9 +101,18 @@ export const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
 };
 
 // Hook for keyboard shortcuts functionality
-export const useKeyboardShortcuts = () => {
+const useKeyboardShortcuts = () => {
   const { canvas, saveCanvas, exportCanvas } = useCanvas();
   const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Moved helper function to top so it's defined before usage
+  const showNotification = (message) => {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50 text-sm';
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 1500);
+  };
 
   useEffect(() => {
     const handleKeyPress = (e) => {
@@ -286,14 +296,6 @@ export const useKeyboardShortcuts = () => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [canvas, saveCanvas, exportCanvas]);
-
-  const showNotification = (message) => {
-    const notification = document.createElement('div');
-    notification.textContent = message;
-    notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50 text-sm';
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 1500);
-  };
 
   return { showShortcuts, setShowShortcuts };
 };

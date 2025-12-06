@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import CanvasEditor from './components/Canvas/CanvasEditor';
 import BrandKitPanel from './components/UI/BrandKitPanel'; // NEW - Day 17
 import OnboardingTutorial from './components/UI/OnboardingTutorial'; // NEW - Day 17

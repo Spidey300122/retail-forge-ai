@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, ChevronRight, ChevronLeft, Check, Sparkles } from 'lucide-react';
 
 const OnboardingTutorial = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    // Check if user has seen tutorial before
+  // Use lazy initialization for checking localStorage
+  const [isVisible, setIsVisible] = useState(() => {
     const hasSeenTutorial = localStorage.getItem('retailforge_tutorial_completed');
-    if (!hasSeenTutorial) {
-      setIsVisible(true);
-    }
-  }, []);
+    return !hasSeenTutorial;
+  });
 
   const steps = [
     {
