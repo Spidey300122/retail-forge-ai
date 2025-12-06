@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Keyboard, X } from 'lucide-react';
-import { useCanvas } from '../context/CanvasContext';
+import useCanvasStore from '../../store/canvasStore'; // Fixed import path
 import { fabric } from 'fabric';
 
 // Keyboard Shortcuts Help Modal
@@ -102,10 +102,15 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
 
 // Hook for keyboard shortcuts functionality
 const useKeyboardShortcuts = () => {
-  const { canvas, saveCanvas, exportCanvas } = useCanvas();
+  // FIXED: Use Zustand store instead of Context
+  const { canvas } = useCanvasStore();
+  
+  // These features are not yet implemented in the store, defining as null to prevent crashes
+  const saveCanvas = null;
+  const exportCanvas = null;
+
   const [showShortcuts, setShowShortcuts] = useState(false);
 
-  // Moved helper function to top so it's defined before usage
   const showNotification = (message) => {
     const notification = document.createElement('div');
     notification.textContent = message;

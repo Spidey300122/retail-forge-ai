@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Save, FolderOpen, Trash2, Plus, Palette, Image as ImageIcon, Sparkles, Loader2, Check } from 'lucide-react';
-import { useCanvas } from '../context/CanvasContext';
+import useCanvasStore from '../../store/canvasStore'; // FIXED IMPORT
 
 const BrandKitPanel = () => {
-  const { canvas } = useCanvas();
+  const { canvas } = useCanvasStore(); // FIXED HOOK USAGE
   const [brandKits, setBrandKits] = useState([]);
   const [isLoading, setIsLoading] = useState(true); // Initial loading state
   const [isProcessing, setIsProcessing] = useState(false); // For save/delete actions

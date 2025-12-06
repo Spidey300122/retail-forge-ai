@@ -1,320 +1,242 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Loader2, Image as ImageIcon } from 'lucide-react';
-import { useCanvas } from '../context/CanvasContext';
-import { generateLayouts } from '../services/aiService';
+import { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff, Lock, Unlock, Trash2, GripVertical, Image as ImageIcon, Type, Square, Triangle, Circle } from 'lucide-react';
+import useCanvasStore from '../../store/canvasStore';
+import './LayersPanel.css';
 
-const LayoutsPanel = () => {
-  const { canvas, addImageToCanvas, addTextToCanvas } = useCanvas();
-  const [productImageUrl, setProductImageUrl] = useState('');
-  const [category, setCategory] = useState('Beverages');
-  const [style, setStyle] = useState('Modern');
-  const [layouts, setLayouts] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState('');
-  const [hasCanvasImage, setHasCanvasImage] = useState(false);
+function LayersPanel() {
+  const { canvas, saveState } = useCanvasStore();
+  const [layers, setLayers] = useState([]);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
-  // Auto-detect images on canvas
+  // Sync layers with Fabric canvas
+  const updateLayers = () => {
+    if (!canvas) return;
+    
+    // Get objects and reverse them (so top layer is first in list)
+    const objects = canvas.getObjects();
+    const reversedObjects = objects.map((obj, index) => ({
+      id: obj.id || `layer-${index}`, // Ensure ID exists
+      type: obj.type,
+      name: obj.name || obj.text || `${obj.type} ${index + 1}`,
+      visible: obj.visible,
+      locked: obj.lockMovementX && obj.lockMovementY,
+      objectRef: obj, // Store reference to actual fabric object
+      index: index // Store original z-index
+    })).reverse();
+
+    setLayers(reversedObjects);
+
+    // Sync selection
+    const activeObjects = canvas.getActiveObjects();
+    setSelectedIds(activeObjects.map(obj => obj.id));
+  };
+
   useEffect(() => {
     if (!canvas) return;
 
-    const detectImages = () => {
-      const objects = canvas.getObjects();
-      const imageObject = objects.find(obj => obj.type === 'image');
-      
-      if (imageObject) {
-        setHasCanvasImage(true);
-        // Auto-populate URL if not already set
-        if (!productImageUrl && imageObject.getSrc) {
-          const src = imageObject.getSrc();
-          setProductImageUrl(src);
-        }
-      } else {
-        setHasCanvasImage(false);
-      }
-    };
+    // Initial load
+    updateLayers();
 
-    detectImages();
+    // Event listeners to keep UI in sync
+    const events = [
+      'object:added', 
+      'object:removed', 
+      'object:modified', 
+      'selection:created', 
+      'selection:updated', 
+      'selection:cleared'
+    ];
 
-    // Listen for canvas changes
-    canvas.on('object:added', detectImages);
-    canvas.on('object:removed', detectImages);
+    events.forEach(e => canvas.on(e, updateLayers));
 
     return () => {
-      canvas.off('object:added', detectImages);
-      canvas.off('object:removed', detectImages);
+      events.forEach(e => canvas.off(e, updateLayers));
     };
-  }, [canvas, productImageUrl]);
+  }, [canvas]);
 
-  const detectCanvasImage = () => {
-    if (!canvas) {
-      setError('Canvas not initialized');
-      return;
-    }
+  // --- Handlers ---
 
-    const objects = canvas.getObjects();
-    const imageObject = objects.find(obj => obj.type === 'image');
-
-    if (imageObject && imageObject.getSrc) {
-      const src = imageObject.getSrc();
-      setProductImageUrl(src);
-      setError('');
-      // Show success feedback
-      const notification = document.createElement('div');
-      notification.textContent = '✓ Image detected from canvas';
-      notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
-      document.body.appendChild(notification);
-      setTimeout(() => notification.remove(), 2000);
-    } else {
-      setError('No image found on canvas. Please upload an image first in the UPLOAD tab.');
-    }
-  };
-
-  const handleGenerateLayouts = async () => {
-    if (!productImageUrl) {
-      setError('Please provide a product image URL or detect from canvas');
-      return;
-    }
-
-    setIsGenerating(true);
-    setError('');
-    setLayouts([]);
-
-    try {
-      const result = await generateLayouts({
-        imageUrl: productImageUrl,
-        category,
-        style
-      });
-
-      if (result.success) {
-        setLayouts(result.layouts);
-      } else {
-        setError(result.error || 'Failed to generate layouts');
-      }
-    } catch (err) {
-      setError('Error generating layouts: ' + err.message);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const applyLayout = async (layout) => {
+  const handleSelect = (layer) => {
     if (!canvas) return;
-
-    try {
-      // Clear canvas
-      canvas.clear();
-
-      // Apply background color if specified
-      if (layout.backgroundColor) {
-        canvas.setBackgroundColor(layout.backgroundColor, canvas.renderAll.bind(canvas));
-      }
-
-      // Add product image
-      if (productImageUrl) {
-        await addImageToCanvas(productImageUrl, {
-          left: layout.productPosition?.x || 200,
-          top: layout.productPosition?.y || 150,
-          scaleX: layout.productPosition?.scale || 0.8,
-          scaleY: layout.productPosition?.scale || 0.8
-        });
-      }
-
-      // Add headline
-      if (layout.headline) {
-        addTextToCanvas(layout.headline, {
-          left: layout.headlinePosition?.x || 100,
-          top: layout.headlinePosition?.y || 50,
-          fontSize: layout.headlinePosition?.fontSize || 36,
-          fontWeight: 'bold',
-          fill: layout.headlinePosition?.color || '#000000'
-        });
-      }
-
-      // Add subheadline
-      if (layout.subheadline) {
-        addTextToCanvas(layout.subheadline, {
-          left: layout.subheadlinePosition?.x || 100,
-          top: layout.subheadlinePosition?.y || 100,
-          fontSize: layout.subheadlinePosition?.fontSize || 24,
-          fill: layout.subheadlinePosition?.color || '#666666'
-        });
-      }
-
+    
+    canvas.discardActiveObject();
+    
+    // Handle locked objects differently if needed, but usually we allow selection in panel
+    const obj = layer.objectRef;
+    
+    if (obj.visible) {
+      canvas.setActiveObject(obj);
       canvas.renderAll();
-
-      // Success notification
-      const notification = document.createElement('div');
-      notification.textContent = '✓ Layout applied successfully';
-      notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
-      document.body.appendChild(notification);
-      setTimeout(() => notification.remove(), 2000);
-
-    } catch (err) {
-      setError('Error applying layout: ' + err.message);
     }
   };
+
+  const toggleVisibility = (e, layer) => {
+    e.stopPropagation();
+    const obj = layer.objectRef;
+    obj.set('visible', !obj.visible);
+    
+    // If hiding selected object, deselect it
+    if (!obj.visible) {
+      canvas.discardActiveObject();
+    }
+    
+    canvas.renderAll();
+    saveState();
+    updateLayers();
+  };
+
+  const toggleLock = (e, layer) => {
+    e.stopPropagation();
+    const obj = layer.objectRef;
+    const isLocked = !layer.locked;
+    
+    obj.set({
+      lockMovementX: isLocked,
+      lockMovementY: isLocked,
+      lockRotation: isLocked,
+      lockScalingX: isLocked,
+      lockScalingY: isLocked,
+      selectable: !isLocked, // Optional: make unselectable on canvas when locked
+      evented: !isLocked     // Optional: ignore events when locked
+    });
+
+    canvas.discardActiveObject();
+    canvas.renderAll();
+    saveState();
+    updateLayers();
+  };
+
+  const handleDelete = (e, layer) => {
+    e.stopPropagation();
+    if (confirm('Delete this layer?')) {
+      canvas.remove(layer.objectRef);
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      saveState();
+      // updateLayers triggered by event listener
+    }
+  };
+
+  // --- Drag and Drop Logic ---
+
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    // Required for Firefox
+    e.dataTransfer.effectAllowed = 'move'; 
+    // Use a transparent image or styling if desired
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault(); // Necessary to allow dropping
+    if (index === draggedIndex) return;
+    // Optional: Add visual indicator logic here
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+
+    const newLayers = [...layers];
+    const [movedLayer] = newLayers.splice(draggedIndex, 1);
+    newLayers.splice(dropIndex, 0, movedLayer);
+
+    // Update Fabric.js Z-Index
+    // Note: 'layers' state is reversed (Top -> Bottom). 
+    // Fabric stack is (Bottom -> Top).
+    // We need to re-stack everything according to the new list order.
+    
+    // Iterate from bottom of list (which is bottom of stack)
+    for (let i = newLayers.length - 1; i >= 0; i--) {
+      const obj = newLayers[i].objectRef;
+      // Move to top repeatedly to stack them in correct order
+      obj.bringToFront(); 
+    }
+
+    setLayers(newLayers);
+    setDraggedIndex(null);
+    canvas.renderAll();
+    saveState();
+  };
+
+  // Helper for icons
+  const getLayerIcon = (type) => {
+    switch (type) {
+      case 'image': return <ImageIcon size={14} />;
+      case 'i-text': 
+      case 'text': return <Type size={14} />;
+      case 'rect': return <Square size={14} />;
+      case 'triangle': return <Triangle size={14} />;
+      case 'circle': return <Circle size={14} />;
+      default: return <Square size={14} />;
+    }
+  };
+
+  if (layers.length === 0) {
+    return (
+      <div className="layers-empty">
+        <div className="layers-empty-text">No layers yet</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-purple-600" />
-          AI Layout Suggestions
-        </h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Let AI suggest optimal layouts for your product
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4">
-        {/* Product Image URL Input */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Product Image URL
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={productImageUrl}
-              onChange={(e) => {
-                setProductImageUrl(e.target.value);
-                setError('');
-              }}
-              placeholder="https://example.com/product.jpg"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-            <button
-              onClick={detectCanvasImage}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-md flex items-center gap-2 transition-colors"
-              title="Detect image from canvas"
-            >
-              <ImageIcon className="w-4 h-4" />
-              Detect
-            </button>
-          </div>
-          {hasCanvasImage && !productImageUrl && (
-            <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-              <ImageIcon className="w-3 h-3" />
-              Image detected on canvas - click "Detect" to use it
-            </p>
-          )}
-          {!hasCanvasImage && !productImageUrl && (
-            <p className="text-xs text-gray-500 mt-1">
-              💡 Tip: Upload an image in the UPLOAD tab first, or paste a URL above
-            </p>
-          )}
-        </div>
-
-        {/* Category Selection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="Beverages">Beverages</option>
-            <option value="Food">Food</option>
-            <option value="Beauty">Beauty & Personal Care</option>
-            <option value="Household">Household</option>
-            <option value="Snacks">Snacks</option>
-            <option value="Fresh">Fresh Produce</option>
-          </select>
-        </div>
-
-        {/* Style Selection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Style
-          </label>
-          <select
-            value={style}
-            onChange={(e) => setStyle(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="Modern">Modern</option>
-            <option value="Minimal">Minimal</option>
-            <option value="Bold">Bold</option>
-            <option value="Elegant">Elegant</option>
-            <option value="Vibrant">Vibrant</option>
-          </select>
-        </div>
-
-        {/* Generate Button */}
-        <button
-          onClick={handleGenerateLayouts}
-          disabled={isGenerating || !productImageUrl}
-          className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-md flex items-center justify-center gap-2 transition-colors"
+    <div className="layers-panel">
+      {layers.map((layer, index) => (
+        <div
+          key={layer.id || index}
+          draggable
+          onDragStart={(e) => handleDragStart(e, index)}
+          onDragOver={(e) => handleDragOver(e, index)}
+          onDrop={(e) => handleDrop(e, index)}
+          onClick={() => handleSelect(layer)}
+          className={`layer-card ${selectedIds.includes(layer.id) ? 'selected' : ''} ${draggedIndex === index ? 'dragging' : ''}`}
         >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating Layouts...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5" />
-              Generate Layouts
-            </>
-          )}
-        </button>
+          <div className="layer-content">
+            <div className="layer-drag-handle">
+              <GripVertical size={14} />
+            </div>
+            
+            <div className="text-gray-500">
+              {getLayerIcon(layer.type)}
+            </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
+            <div className="layer-info">
+              <p className="layer-name">{layer.name}</p>
+              <p className="layer-type">{layer.type}</p>
+            </div>
 
-        {/* Layout Suggestions */}
-        {layouts.length > 0 && (
-          <div className="mt-6 space-y-4">
-            <h3 className="font-semibold text-gray-800">Suggested Layouts</h3>
-            {layouts.map((layout, index) => (
-              <div
-                key={index}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            <div className="layer-controls">
+              <button 
+                onClick={(e) => toggleVisibility(e, layer)} 
+                className="layer-btn"
+                title={layer.visible ? "Hide" : "Show"}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h4 className="font-medium text-gray-800">{layout.name}</h4>
-                    <p className="text-sm text-gray-500 mt-1">{layout.description}</p>
-                  </div>
-                </div>
-
-                {/* Layout Preview Details */}
-                <div className="mt-3 p-3 bg-gray-50 rounded text-xs space-y-1">
-                  <p><strong>Background:</strong> {layout.backgroundColor || 'White'}</p>
-                  <p><strong>Headline:</strong> {layout.headline}</p>
-                  {layout.subheadline && (
-                    <p><strong>Subhead:</strong> {layout.subheadline}</p>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => applyLayout(layout)}
-                  className="mt-3 w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors"
-                >
-                  Apply Layout
-                </button>
-              </div>
-            ))}
+                {layer.visible ? <Eye size={14} /> : <EyeOff size={14} />}
+              </button>
+              
+              <button 
+                onClick={(e) => toggleLock(e, layer)} 
+                className="layer-btn"
+                title={layer.locked ? "Unlock" : "Lock"}
+              >
+                {layer.locked ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
+              
+              <button 
+                onClick={(e) => handleDelete(e, layer)} 
+                className="layer-btn layer-btn-delete"
+                title="Delete"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
-        )}
-
-        {/* Empty State */}
-        {!isGenerating && layouts.length === 0 && !error && (
-          <div className="mt-8 text-center text-gray-400">
-            <Sparkles className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Enter a product image URL and click Generate Layouts</p>
-          </div>
-        )}
-      </div>
+        </div>
+      ))}
     </div>
   );
-};
+}
 
-export default LayoutsPanel;
+export default LayersPanel;
