@@ -6,11 +6,15 @@ dotenv.config();
 const requiredEnvVars = [
   'DATABASE_URL',
   'REDIS_URL',
+  'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY'
+];
+
+// Optional but recommended
+const optionalEnvVars = [
   'AWS_ACCESS_KEY_ID',
   'AWS_SECRET_ACCESS_KEY',
   'AWS_S3_BUCKET',
-  'OPENAI_API_KEY',
-  'ANTHROPIC_API_KEY',
   'STABILITY_API_KEY'
 ];
 
@@ -22,6 +26,13 @@ export function validateEnv() {
     missing.forEach(varName => console.error(`   - ${varName}`));
     console.error('\nPlease check your .env file');
     process.exit(1);
+  }
+
+  const missingOptional = optionalEnvVars.filter(varName => !process.env[varName]);
+  if (missingOptional.length > 0) {
+    console.warn('⚠️  Missing optional environment variables:');
+    missingOptional.forEach(varName => console.warn(`   - ${varName}`));
+    console.warn('Some features may not work without these.\n');
   }
   
   console.log('✅ All required environment variables are set');
@@ -41,16 +52,16 @@ export const config = {
   },
   
   aws: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
     region: process.env.AWS_REGION || 'us-east-1',
-    s3Bucket: process.env.AWS_S3_BUCKET
+    s3Bucket: process.env.AWS_S3_BUCKET || ''
   },
   
   ai: {
     openai: process.env.OPENAI_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
-    stability: process.env.STABILITY_API_KEY
+    stability: process.env.STABILITY_API_KEY || ''
   },
   
   upload: {
