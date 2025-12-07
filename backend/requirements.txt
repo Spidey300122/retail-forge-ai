@@ -8,15 +8,14 @@ python-multipart==0.0.6
 pillow==10.1.0
 opencv-python==4.8.1.78
 numpy==1.26.2
-segment-anything
 scikit-learn==1.3.2
+requests==2.31.0
 
-# AI/ML
+# AI/ML 
 openai==1.3.0
 anthropic==0.7.0
 langchain==0.0.350
 transformers==4.35.0
-torch==2.3.1
 pandas==2.1.3
 
 # Database
@@ -24,11 +23,16 @@ sqlalchemy==2.0.23
 psycopg2-binary==2.9.9
 
 # Utilities
-requests==2.31.0
 python-jose==3.3.0
 passlib==1.7.4
 
+stability-sdk>=0.8.0
+rembg[full]
+onnxruntime
+filetype 
+watchdog
+gradio
+asyncer
+torch==2.3.1
+segment-anything
 torchvision
-git+https://github.com/facebookresearch/segment-anything.git
-opencv-python-headless
-stability-sdk>=0.8.0 

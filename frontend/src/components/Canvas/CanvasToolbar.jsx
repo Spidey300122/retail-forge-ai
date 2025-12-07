@@ -1,10 +1,83 @@
+// frontend/src/components/Canvas/CanvasToolbar.jsx
 import { useState } from 'react';
-import { Undo, Redo, Trash2, Download, X, Check, Package, FileText, Shield, Loader } from 'lucide-react';
+import { Undo, Redo, Trash2, Download, X, Check, Package, Shield, Loader } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
 import toast from 'react-hot-toast';
 import './CanvasToolbar.css';
 import Tooltip from '../UI/Tooltip';
+// Add ValidationModal component definition here (after imports, before ExportModal)
+function ValidationModal({ isOpen, onClose, validationResults, isValidating }) {
+  if (!isOpen) return null;
 
+  const getSeverityIcon = (severity) => {
+    switch (severity) {
+      case 'hard_fail': return <AlertCircle size={16} />;
+      case 'warning': return <Info size={16} />;
+      default: return <Info size={16} />;
+    }
+  };
+
+  return (
+    <div style={{position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000}} onClick={onClose}>
+      <div style={{backgroundColor: 'white', borderRadius: '12px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflow: 'auto'}} onClick={(e) => e.stopPropagation()}>
+        <div style={{padding: '24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between'}}>
+          <div style={{display: 'flex', gap: '12px', alignItems: 'center'}}>
+            <Shield size={24} color="#2563eb" />
+            <h2 style={{fontSize: '20px', fontWeight: 'bold', margin: 0}}>Compliance Results</h2>
+          </div>
+          <button onClick={onClose} style={{background: 'none', border: 'none', cursor: 'pointer'}}>
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div style={{padding: '24px'}}>
+          {isValidating ? (
+            <div style={{textAlign: 'center', padding: '48px'}}>
+              <Loader size={48} className="animate-spin" style={{margin: '0 auto'}} />
+              <p style={{marginTop: '16px', color: '#6b7280'}}>Validating...</p>
+            </div>
+          ) : validationResults ? (
+            <div>
+              <div style={{padding: '20px', borderRadius: '12px', border: '2px solid', borderColor: validationResults.isCompliant ? '#22c55e' : '#ef4444', backgroundColor: validationResults.isCompliant ? '#f0fdf4' : '#fef2f2', marginBottom: '24px'}}>
+                {validationResults.isCompliant ? <CheckCircle size={40} color="#22c55e" /> : <AlertCircle size={40} color="#ef4444" />}
+                <h3 style={{fontSize: '20px', fontWeight: 'bold', margin: '8px 0 4px'}}>{validationResults.isCompliant ? 'All Clear!' : 'Issues Found'}</h3>
+                <p style={{fontSize: '16px', fontWeight: '600'}}>Score: {validationResults.score}/100</p>
+                <p style={{fontSize: '13px'}}>{validationResults.rulesPassed}/{validationResults.rulesChecked} rules passed</p>
+              </div>
+
+              {validationResults.violations?.map((v, i) => (
+                <div key={i} style={{padding: '12px', marginBottom: '12px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fca5a5'}}>
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    {getSeverityIcon(v.severity)}
+                    <div>
+                      <h5 style={{fontSize: '14px', fontWeight: '600', margin: '0 0 4px'}}>{v.ruleName}</h5>
+                      <p style={{fontSize: '13px', margin: 0}}>{v.message}</p>
+                      {v.suggestion && (
+                        <div style={{marginTop: '8px', padding: '8px', backgroundColor: 'rgba(139,92,246,0.1)', borderLeft: '3px solid #8b5cf6', display: 'flex', gap: '8px'}}>
+                          <Lightbulb size={14} color="#6d28d9" />
+                          <span style={{fontSize: '12px', color: '#6d28d9'}}>{v.suggestion}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{textAlign: 'center', padding: '48px', color: '#6b7280'}}>
+              <Shield size={48} style={{margin: '0 auto 16px', opacity: 0.3}} />
+              <p>No results yet. Click Validate to check compliance.</p>
+            </div>
+          )}
+        </div>
+
+        <div style={{padding: '16px 24px', borderTop: '1px solid #e5e7eb', textAlign: 'right'}}>
+          <button onClick={onClose} style={{padding: '10px 20px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer'}}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 // Export formats configuration
 const AVAILABLE_FORMATS = [
   { id: 'instagram_post', name: 'Instagram Post', dims: '1080 x 1080', width: 1080, height: 1080 },
@@ -217,22 +290,6 @@ function ExportModal({ isOpen, onClose, canvas }) {
               </div>
             ))}
           </div>
-
-          <div style={{
-            marginTop: '20px',
-            padding: '16px',
-            backgroundColor: '#f9fafb',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            border: '1px solid #e5e7eb'
-          }}>
-            <FileText size={20} style={{ color: '#6b7280', flexShrink: 0 }} />
-            <div style={{ fontSize: '13px', color: '#4b5563' }}>
-              Includes Compliance PDF Report
-            </div>
-          </div>
         </div>
 
         <div style={{
@@ -312,7 +369,9 @@ function ExportModal({ isOpen, onClose, canvas }) {
 function CanvasToolbar({ isReady }) {
   const { canvas, clearCanvas, undo, redo } = useCanvasStore();
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [validationResults, setValidationResults] = useState(null);
 
   const handleUndo = () => {
     undo();
@@ -342,8 +401,8 @@ function CanvasToolbar({ isReady }) {
   const handleValidate = async () => {
     if (!canvas) return;
 
+    setShowValidationModal(true);
     setIsValidating(true);
-    const loadingToast = toast.loading('Validating compliance...');
 
     try {
       // Extract creative data from canvas
@@ -383,25 +442,19 @@ function CanvasToolbar({ isReady }) {
       const data = await response.json();
 
       if (data.success) {
-        const result = data.data;
+        setValidationResults(data.data);
         
-        if (result.isCompliant) {
-          toast.success(`✅ Compliant! Score: ${result.score}/100`, { 
-            id: loadingToast,
-            duration: 4000 
-          });
+        if (data.data.isCompliant) {
+          toast.success(`✅ Compliant! Score: ${data.data.score}/100`);
         } else {
-          toast.error(`⚠️ ${result.violations.length} issue(s) found. Score: ${result.score}/100`, { 
-            id: loadingToast,
-            duration: 5000 
-          });
+          toast.error(`⚠️ ${data.data.violations.length} issue(s) found`);
         }
       } else {
         throw new Error(data.error?.message || 'Validation failed');
       }
     } catch (error) {
       console.error('Validation error:', error);
-      toast.error('Failed to validate', { id: loadingToast });
+      toast.error('Failed to validate');
     } finally {
       setIsValidating(false);
     }
@@ -466,18 +519,13 @@ function CanvasToolbar({ isReady }) {
         <Tooltip text="Check Compliance">
           <button
             onClick={handleValidate}
-            disabled={!isReady || isValidating}
+            disabled={!isReady}
             className="toolbar-btn"
             style={{
-              marginRight: '8px',
-              backgroundColor: isValidating ? '#f3f4f6' : 'transparent'
+              marginRight: '8px'
             }}
           >
-            {isValidating ? (
-              <Loader size={20} className="animate-spin" />
-            ) : (
-              <Shield size={20} />
-            )}
+            <Shield size={20} />
           </button>
         </Tooltip>
 
@@ -497,6 +545,14 @@ function CanvasToolbar({ isReady }) {
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         canvas={canvas}
+      />
+
+      {/* Validation Modal */}
+      <ValidationModal
+        isOpen={showValidationModal}
+        onClose={() => setShowValidationModal(false)}
+        validationResults={validationResults}
+        isValidating={isValidating}
       />
 
       {/* Animations */}

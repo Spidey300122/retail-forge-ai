@@ -1,3 +1,4 @@
+// frontend/src/components/Canvas/LayersPanel.jsx
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Lock, Unlock, Trash2, GripVertical } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
@@ -6,8 +7,9 @@ import './LayersPanel.css';
 function LayersPanel() {
   const { canvas, saveState } = useCanvasStore();
   const [layers, setLayers] = useState([]);
-  // We use a state to force re-renders when selection changes
   const [selectedRef, setSelectedRef] = useState(null);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   useEffect(() => {
     if (!canvas) return;
@@ -86,7 +88,7 @@ function LayersPanel() {
     e.stopPropagation();
     if (!canvas) return;
 
-    // Toggle lock state (checking lockMovementX as a proxy for all)
+    // Toggle lock state
     const shouldLock = !obj.lockMovementX;
     
     obj.set({
@@ -95,8 +97,6 @@ function LayersPanel() {
       lockRotation: shouldLock,
       lockScalingX: shouldLock,
       lockScalingY: shouldLock,
-      // Optional: Decide if locked objects should still be selectable
-      // selectable: !shouldLock 
     });
 
     canvas.requestRenderAll();
@@ -114,6 +114,71 @@ function LayersPanel() {
     }
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.currentTarget);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    if (!canvas) return;
+
+    // Get all objects in their current order
+    const allObjects = canvas.getObjects();
+    
+    // layers array is reversed, so we need to convert indices
+    const fromCanvasIndex = allObjects.length - 1 - draggedIndex;
+    const toCanvasIndex = allObjects.length - 1 - dropIndex;
+    
+    const draggedObject = allObjects[fromCanvasIndex];
+    
+    // Remove from old position
+    allObjects.splice(fromCanvasIndex, 1);
+    
+    // Insert at new position
+    allObjects.splice(toCanvasIndex, 0, draggedObject);
+    
+    // Clear canvas
+    canvas.remove(...canvas.getObjects());
+    
+    // Re-add in new order
+    allObjects.forEach(obj => canvas.add(obj));
+    
+    canvas.renderAll();
+    saveState();
+    
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   if (!layers.length) {
     return (
       <div className="layers-empty">
@@ -125,14 +190,26 @@ function LayersPanel() {
   return (
     <div className="layers-panel">
       {layers.map((obj, index) => {
-        // Check if this object is currently selected
         const isSelected = selectedRef === obj;
+        const isDragging = draggedIndex === index;
+        const isDragOver = dragOverIndex === index;
 
         return (
           <div 
-            key={index} 
-            className={`layer-card ${isSelected ? 'selected' : ''}`}
+            key={index}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
+            className={`layer-card ${isSelected ? 'selected' : ''} ${isDragging ? 'dragging' : ''}`}
             onClick={() => handleSelectLayer(obj)}
+            style={{
+              opacity: isDragging ? 0.5 : 1,
+              borderTop: isDragOver && draggedIndex < index ? '3px solid #2563eb' : undefined,
+              borderBottom: isDragOver && draggedIndex > index ? '3px solid #2563eb' : undefined,
+            }}
           >
             <div className="layer-content">
               <div className="layer-drag-handle">
