@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Upload, Layers, Sparkles, MessageSquare, 
-  Image as ImageIcon, Palette, Type, Wand2, Shield, Download 
+  Image as ImageIcon, Palette, Type, Wand2, FileImage
 } from 'lucide-react';
 
 import ImageUpload from '../Upload/ImageUpload';
@@ -13,8 +13,6 @@ import CopySuggestions from '../AI/CopySuggestions';
 import BackgroundGenerator from '../AI/BackgroundGenerator';
 import BackgroundColorPicker from '../Canvas/BackgroundColorPicker';
 import SmartAssistant from '../AI/SmartAssistant';
-import ValidationPanel from '../Validation/ValidationPanel';
-import ExportPanel from '../Export/ExportPanel'; // <-- Added Day 16
 
 import './Sidebar.css';
 
@@ -55,14 +53,14 @@ function Sidebar({ onAddToCanvas, onAddText }) {
   return (
     <div className="sidebar-root">
       
-      {/* Tabs Header */}
+      {/* Tabs Header - 4 columns grid for better spacing */}
       <div className="sidebar-tabs">
         <button
           className={`sidebar-tab ${activeTab === 'uploads' ? 'active' : ''}`}
           onClick={() => setActiveTab('uploads')}
           title="Upload & Text"
         >
-          <Upload size={20} />
+          <Upload size={18} />
           <span>Upload</span>
         </button>
 
@@ -71,8 +69,8 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           onClick={() => setActiveTab('images')}
           title="Library & Colors"
         >
-          <Palette size={20} />
-          <span>Images</span>
+          <FileImage size={18} />
+          <span>Library</span>
         </button>
 
         <button
@@ -80,7 +78,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           onClick={() => setActiveTab('layers')}
           title="Layers & Objects"
         >
-          <Layers size={20} />
+          <Layers size={18} />
           <span>Layers</span>
         </button>
 
@@ -89,7 +87,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           onClick={() => setActiveTab('ai-assistant')}
           title="AI Smart Assistant"
         >
-          <Wand2 size={20} />
+          <Wand2 size={18} />
           <span>Assistant</span>
         </button>
 
@@ -98,7 +96,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           onClick={() => setActiveTab('ai-layout')}
           title="AI Layouts"
         >
-          <Sparkles size={20} />
+          <Sparkles size={18} />
           <span>Layouts</span>
         </button>
 
@@ -107,7 +105,7 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           onClick={() => setActiveTab('ai-copy')}
           title="AI Copywriting"
         >
-          <MessageSquare size={20} />
+          <MessageSquare size={18} />
           <span>Copy</span>
         </button>
 
@@ -116,27 +114,17 @@ function Sidebar({ onAddToCanvas, onAddText }) {
           onClick={() => setActiveTab('ai-background')}
           title="AI Background Generator"
         >
-          <ImageIcon size={20} />
+          <ImageIcon size={18} />
           <span>Gen BG</span>
         </button>
 
         <button
-          className={`sidebar-tab ${activeTab === 'validation' ? 'active' : ''}`}
-          onClick={() => setActiveTab('validation')}
-          title="Compliance Validation"
+          className={`sidebar-tab ${activeTab === 'colors' ? 'active' : ''}`}
+          onClick={() => setActiveTab('colors')}
+          title="Colors & Palette"
         >
-          <Shield size={20} />
-          <span>Validate</span>
-        </button>
-
-        {/* ⭐ Export Tab Added */}
-        <button
-          className={`sidebar-tab ${activeTab === 'export' ? 'active' : ''}`}
-          onClick={() => setActiveTab('export')}
-          title="Export"
-        >
-          <Download size={20} />
-          <span>Export</span>
+          <Palette size={18} />
+          <span>Colors</span>
         </button>
       </div>
 
@@ -145,38 +133,61 @@ function Sidebar({ onAddToCanvas, onAddText }) {
 
         {activeTab === 'uploads' && (
           <div className="space-y-6">
-            <section>
-              <h3 className="sidebar-heading">Upload New</h3>
+            <section className="sidebar-section">
+              <h3 className="sidebar-heading">
+                <Upload size={14} />
+                Upload Image
+              </h3>
               <ImageUpload onUploadComplete={(data) => {
                 console.log('Upload complete:', data);
               }} />
             </section>
 
-            <div className="border-t border-gray-200 my-4" />
+            <div className="sidebar-divider" />
 
-            <section>
-              <h3 className="sidebar-heading">Add Text</h3>
+            <section className="sidebar-section">
+              <h3 className="sidebar-heading">
+                <Type size={14} />
+                Add Text
+              </h3>
               <div className="text-buttons">
                 <button 
                   onClick={() => onAddText({ text: 'Add a heading', fontSize: 32, fontWeight: 'bold' })}
-                  className="text-btn text-btn-primary"
+                  className="text-btn text-btn-heading"
                 >
-                  <div className="text-btn-icon"><Type size={20} /></div>
-                  <span className="text-btn-title">Add a heading</span>
+                  <div className="text-btn-icon">
+                    <Type size={20} />
+                  </div>
+                  <div className="text-content">
+                    <span className="text-label">Heading</span>
+                    <span className="text-sublabel">Large title text (32px)</span>
+                  </div>
                 </button>
+
                 <button 
                   onClick={() => onAddText({ text: 'Add a subheading', fontSize: 24, fontWeight: 'medium' })}
-                  className="text-btn text-btn-secondary"
+                  className="text-btn text-btn-subheading"
                 >
-                  <div className="text-btn-icon"><Type size={16} /></div>
-                  <span className="text-btn-title">Add a subheading</span>
+                  <div className="text-btn-icon">
+                    <Type size={18} />
+                  </div>
+                  <div className="text-content">
+                    <span className="text-label">Subheading</span>
+                    <span className="text-sublabel">Medium subtitle (24px)</span>
+                  </div>
                 </button>
+
                 <button 
                   onClick={() => onAddText({ text: 'Add body text', fontSize: 16, fontWeight: 'normal' })}
-                  className="text-btn text-btn-tertiary"
+                  className="text-btn text-btn-body"
                 >
-                  <div className="text-btn-icon"><Type size={14} /></div>
-                  <span className="text-btn-title">Add body text</span>
+                  <div className="text-btn-icon">
+                    <Type size={16} />
+                  </div>
+                  <div className="text-content">
+                    <span className="text-label">Body Text</span>
+                    <span className="text-sublabel">Regular paragraph (16px)</span>
+                  </div>
                 </button>
               </div>
             </section>
@@ -185,38 +196,61 @@ function Sidebar({ onAddToCanvas, onAddText }) {
 
         {activeTab === 'images' && (
           <div className="space-y-6">
-            <section>
-              <h3 className="sidebar-heading">Your Library</h3>
+            <section className="sidebar-section">
+              <h3 className="sidebar-heading">
+                <FileImage size={14} />
+                Image Library
+              </h3>
               <ImageLibrary onSelectImage={onAddToCanvas} />
             </section>
+          </div>
+        )}
 
-            <div className="border-t border-gray-200 my-4" />
-
-            <section>
+        {activeTab === 'colors' && (
+          <div className="space-y-6">
+            <section className="sidebar-section">
+              <h3 className="sidebar-heading">
+                <Palette size={14} />
+                Color Palette
+              </h3>
               <BackgroundColorPicker extractedColors={extractedColors} />
             </section>
           </div>
         )}
 
         {activeTab === 'layers' && (
-          <div>
-            <h3 className="sidebar-heading">Layers</h3>
+          <div className="sidebar-section">
+            <h3 className="sidebar-heading">
+              <Layers size={14} />
+              Canvas Layers
+            </h3>
             <LayersPanel />
           </div>
         )}
 
-        {activeTab === 'ai-assistant' && <SmartAssistant />}
+        {activeTab === 'ai-assistant' && (
+          <div className="sidebar-section">
+            <SmartAssistant />
+          </div>
+        )}
 
-        {activeTab === 'ai-layout' && <LayoutSuggestions />}
+        {activeTab === 'ai-layout' && (
+          <div className="sidebar-section">
+            <LayoutSuggestions />
+          </div>
+        )}
 
-        {activeTab === 'ai-copy' && <CopySuggestions />}
+        {activeTab === 'ai-copy' && (
+          <div className="sidebar-section">
+            <CopySuggestions />
+          </div>
+        )}
 
-        {activeTab === 'ai-background' && <BackgroundGenerator />}
-
-        {activeTab === 'validation' && <ValidationPanel />}
-        
-        {/* ⭐ Export Panel */}
-        {activeTab === 'export' && <ExportPanel />}
+        {activeTab === 'ai-background' && (
+          <div className="sidebar-section">
+            <BackgroundGenerator />
+          </div>
+        )}
 
       </div>
     </div>

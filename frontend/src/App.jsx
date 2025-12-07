@@ -1,8 +1,7 @@
 import React from 'react';
 import CanvasEditor from './components/Canvas/CanvasEditor';
-import BrandKitPanel from './components/UI/BrandKitPanel'; // NEW - Day 17
-import OnboardingTutorial from './components/UI/OnboardingTutorial'; // NEW - Day 17
-import KeyboardShortcutsManager from './components/UI/KeyboardShortcuts'; // NEW - Day 18
+import OnboardingTutorial from './components/UI/OnboardingTutorial';
+import KeyboardShortcutsManager from './components/UI/KeyboardShortcuts'; // Ensure this import
 import { Toaster } from 'react-hot-toast';
 import './App.css';
 
@@ -12,7 +11,7 @@ function App() {
       {/* Onboarding Tutorial - Shows on first visit */}
       <OnboardingTutorial />
 
-      {/* Keyboard Shortcuts Manager */}
+      {/* Keyboard Shortcuts Manager - FLOATING BUTTON BOTTOM RIGHT */}
       <KeyboardShortcutsManager />
 
       {/* Main Canvas Editor (contains everything) */}

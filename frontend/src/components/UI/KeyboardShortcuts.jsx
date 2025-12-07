@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Keyboard, X } from 'lucide-react';
-import useCanvasStore from '../../store/canvasStore'; // Fixed import path
+import useCanvasStore from '../../store/canvasStore';
 import { fabric } from 'fabric';
 
 // Keyboard Shortcuts Help Modal
@@ -8,76 +8,164 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const shortcuts = [
-    { category: 'General', items: [
-      { keys: ['?'], description: 'Show keyboard shortcuts' },
-      { keys: ['Ctrl', 'S'], description: 'Save current design' },
-      { keys: ['Ctrl', 'E'], description: 'Export creative' },
-      { keys: ['Esc'], description: 'Deselect all / Close modal' }
-    ]},
-    { category: 'Canvas', items: [
-      { keys: ['Ctrl', 'Z'], description: 'Undo' },
-      { keys: ['Ctrl', 'Y'], description: 'Redo' },
-      { keys: ['Ctrl', 'C'], description: 'Copy selected object' },
-      { keys: ['Ctrl', 'V'], description: 'Paste' },
-      { keys: ['Del'], description: 'Delete selected object' },
-      { keys: ['Ctrl', 'A'], description: 'Select all objects' }
-    ]},
-    { category: 'Object Manipulation', items: [
-      { keys: ['↑', '↓', '←', '→'], description: 'Move object (1px)' },
-      { keys: ['Shift', '↑↓←→'], description: 'Move object (10px)' },
-      { keys: ['Ctrl', '+'], description: 'Zoom in' },
-      { keys: ['Ctrl', '-'], description: 'Zoom out' },
-      { keys: ['Ctrl', '0'], description: 'Reset zoom to 100%' }
-    ]},
-    { category: 'Layers', items: [
-      { keys: ['Ctrl', '['], description: 'Send backward' },
-      { keys: ['Ctrl', ']'], description: 'Bring forward' },
-      { keys: ['Ctrl', 'Shift', '['], description: 'Send to back' },
-      { keys: ['Ctrl', 'Shift', ']'], description: 'Bring to front' }
-    ]}
+    { 
+      category: 'General', 
+      items: [
+        { keys: ['?'], description: 'Show keyboard shortcuts' },
+        { keys: ['Ctrl', 'S'], description: 'Save current design' },
+        { keys: ['Ctrl', 'E'], description: 'Export creative' },
+        { keys: ['Esc'], description: 'Deselect all / Close modal' }
+      ]
+    },
+    { 
+      category: 'Canvas', 
+      items: [
+        { keys: ['Ctrl', 'Z'], description: 'Undo' },
+        { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo' },
+        { keys: ['Ctrl', 'Y'], description: 'Redo (Windows alternative)' },
+        { keys: ['Ctrl', 'C'], description: 'Copy selected object' },
+        { keys: ['Ctrl', 'V'], description: 'Paste' },
+        { keys: ['Del'], description: 'Delete selected object' },
+        { keys: ['Backspace'], description: 'Delete selected object (alternative)' },
+        { keys: ['Ctrl', 'A'], description: 'Select all objects' }
+      ]
+    },
+    { 
+      category: 'Object Manipulation', 
+      items: [
+        { keys: ['↑', '↓', '←', '→'], description: 'Move object (1px)' },
+        { keys: ['Shift', '↑↓←→'], description: 'Move object (10px)' },
+        { keys: ['Ctrl', '+'], description: 'Zoom in' },
+        { keys: ['Ctrl', '-'], description: 'Zoom out' },
+        { keys: ['Ctrl', '0'], description: 'Reset zoom to 100%' },
+        { keys: ['Scroll'], description: 'Zoom in/out' },
+        { keys: ['Alt', 'Drag'], description: 'Pan canvas' },
+        { keys: ['Cmd', 'Drag'], description: 'Pan canvas (Mac)' }
+      ]
+    },
+    { 
+      category: 'Layers', 
+      items: [
+        { keys: ['Ctrl', '['], description: 'Send backward' },
+        { keys: ['Ctrl', ']'], description: 'Bring forward' },
+        { keys: ['Ctrl', 'Shift', '['], description: 'Send to back' },
+        { keys: ['Ctrl', 'Shift', ']'], description: 'Bring to front' }
+      ]
+    }
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+    <div 
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        zIndex: 10000
+      }}
+      onClick={onClose}
+    >
+      <div 
+        style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+          maxWidth: '672px',
+          width: '100%',
+          maxHeight: '90vh',
+          overflow: 'hidden'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-6 border-b flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Keyboard className="w-6 h-6 text-purple-600" />
-            <h2 className="text-xl font-bold text-gray-800">Keyboard Shortcuts</h2>
+        <div style={{
+          padding: '24px',
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Keyboard style={{ width: '24px', height: '24px', color: '#8b5cf6' }} />
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1f2937', margin: 0 }}>
+              Keyboard Shortcuts
+            </h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            style={{
+              color: '#9ca3af',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.color = '#4b5563'}
+            onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
+            title="Close (Esc)"
           >
-            <X className="w-5 h-5" />
+            <X style={{ width: '20px', height: '20px' }} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div style={{
+          padding: '24px',
+          overflowY: 'auto',
+          maxHeight: 'calc(90vh - 120px)'
+        }}>
           {shortcuts.map((category, idx) => (
-            <div key={idx} className="mb-6 last:mb-0">
-              <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">
+            <div key={idx} style={{ marginBottom: idx < shortcuts.length - 1 ? '24px' : 0 }}>
+              <h3 style={{
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '12px',
+                fontSize: '12px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
                 {category.category}
               </h3>
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {category.items.map((shortcut, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
-                    <span className="text-sm text-gray-600">
+                    <span style={{ fontSize: '14px', color: '#4b5563' }}>
                       {shortcut.description}
                     </span>
-                    <div className="flex items-center gap-1">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       {shortcut.keys.map((key, i) => (
                         <React.Fragment key={i}>
-                          <kbd className="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-100 border border-gray-300 rounded shadow-sm">
+                          <kbd style={{
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            backgroundColor: '#f3f4f6',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '4px',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                          }}>
                             {key}
                           </kbd>
                           {i < shortcut.keys.length - 1 && (
-                            <span className="text-gray-400 text-xs">+</span>
+                            <span style={{ color: '#9ca3af', fontSize: '12px' }}>+</span>
                           )}
                         </React.Fragment>
                       ))}
@@ -90,9 +178,19 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t bg-gray-50 text-center">
-          <p className="text-xs text-gray-500">
-            Press <kbd className="px-2 py-1 text-xs bg-gray-200 rounded">?</kbd> anytime to view shortcuts
+        <div style={{
+          padding: '16px',
+          borderTop: '1px solid #e5e7eb',
+          backgroundColor: '#f9fafb',
+          textAlign: 'center'
+        }}>
+          <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+            Press <kbd style={{
+              padding: '2px 8px',
+              fontSize: '12px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '4px'
+            }}>?</kbd> anytime to view shortcuts
           </p>
         </div>
       </div>
@@ -102,19 +200,24 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
 
 // Hook for keyboard shortcuts functionality
 const useKeyboardShortcuts = () => {
-  // FIXED: Use Zustand store instead of Context
   const { canvas } = useCanvasStore();
-  
-  // These features are not yet implemented in the store, defining as null to prevent crashes
-  const saveCanvas = null;
-  const exportCanvas = null;
-
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   const showNotification = (message) => {
     const notification = document.createElement('div');
     notification.textContent = message;
-    notification.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50 text-sm';
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background-color: #1f2937;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 9999;
+      font-size: 14px;
+    `;
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 1500);
   };
@@ -130,7 +233,10 @@ const useKeyboardShortcuts = () => {
 
       // Close modal with Esc
       if (e.key === 'Escape') {
-        setShowShortcuts(false);
+        if (showShortcuts) {
+          setShowShortcuts(false);
+          return;
+        }
         if (canvas) {
           canvas.discardActiveObject();
           canvas.renderAll();
@@ -142,25 +248,6 @@ const useKeyboardShortcuts = () => {
 
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       const activeObject = canvas.getActiveObject();
-
-      // Ctrl/Cmd + S: Save
-      if (isCtrlOrCmd && e.key === 's') {
-        e.preventDefault();
-        if (saveCanvas) {
-          saveCanvas();
-          showNotification('✓ Design saved');
-        }
-        return;
-      }
-
-      // Ctrl/Cmd + E: Export
-      if (isCtrlOrCmd && e.key === 'e') {
-        e.preventDefault();
-        if (exportCanvas) {
-          exportCanvas();
-        }
-        return;
-      }
 
       // Delete: Remove selected object
       if ((e.key === 'Delete' || e.key === 'Backspace') && activeObject) {
@@ -259,22 +346,6 @@ const useKeyboardShortcuts = () => {
         return;
       }
 
-      // Ctrl/Cmd + Shift + [: Send to back
-      if (isCtrlOrCmd && e.shiftKey && e.key === '{' && activeObject) {
-        e.preventDefault();
-        canvas.sendToBack(activeObject);
-        canvas.renderAll();
-        return;
-      }
-
-      // Ctrl/Cmd + Shift + ]: Bring to front
-      if (isCtrlOrCmd && e.shiftKey && e.key === '}' && activeObject) {
-        e.preventDefault();
-        canvas.bringToFront(activeObject);
-        canvas.renderAll();
-        return;
-      }
-
       // Zoom controls
       if (isCtrlOrCmd && e.key === '+') {
         e.preventDefault();
@@ -300,12 +371,12 @@ const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [canvas, saveCanvas, exportCanvas]);
+  }, [canvas, showShortcuts]);
 
   return { showShortcuts, setShowShortcuts };
 };
 
-// Component to add to your main App
+// Main Component - FIXED BUTTON AT BOTTOM RIGHT
 const KeyboardShortcutsManager = () => {
   const { showShortcuts, setShowShortcuts } = useKeyboardShortcuts();
 
@@ -316,13 +387,46 @@ const KeyboardShortcutsManager = () => {
         onClose={() => setShowShortcuts(false)}
       />
       
-      {/* Floating help button */}
+      {/* Floating help button - BOTTOM RIGHT - INLINE STYLES FOR MAXIMUM VISIBILITY */}
       <button
         onClick={() => setShowShortcuts(true)}
-        className="fixed bottom-4 left-4 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg z-40 transition-colors"
         title="Keyboard shortcuts (?)"
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          width: '56px',
+          height: '56px',
+          background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 12px rgba(124, 58, 237, 0.4)',
+          transition: 'all 0.3s ease',
+          zIndex: 9999
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)';
+          e.target.style.transform = 'scale(1.1)';
+          e.target.style.boxShadow = '0 6px 16px rgba(124, 58, 237, 0.5)';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+          e.target.style.transform = 'scale(1)';
+          e.target.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.4)';
+        }}
+        onMouseDown={(e) => {
+          e.target.style.transform = 'scale(1.05)';
+        }}
+        onMouseUp={(e) => {
+          e.target.style.transform = 'scale(1.1)';
+        }}
       >
-        <Keyboard className="w-5 h-5" />
+        <Keyboard style={{ width: '24px', height: '24px' }} />
       </button>
     </>
   );
