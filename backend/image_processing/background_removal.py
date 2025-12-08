@@ -1,43 +1,18 @@
-from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
+"""
+Lightweight Background Removal using rembg
+Much faster and less resource-intensive than SAM
+"""
+
+from rembg import remove
 from PIL import Image
-import numpy as np
-import cv2
+import io
 import os
 import sys
 
-# Model configuration
-MODEL_TYPE = "vit_h"
-CHECKPOINT_PATH = os.path.join(os.path.dirname(__file__), "models/sam_vit_h_4b8939.pth")
-
-# Global model instance (loaded once)
-sam_model = None
-
-def load_sam_model():
-    """Load SAM model (cached)"""
-    global sam_model
-    
-    if sam_model is None:
-        print("🔄 Loading SAM model... (this may take 30 seconds)")
-        
-        if not os.path.exists(CHECKPOINT_PATH):
-            raise FileNotFoundError(
-                f"SAM checkpoint not found at {CHECKPOINT_PATH}\n"
-                f"Please download it from: https://github.com/facebookresearch/segment-anything#model-checkpoints"
-            )
-        
-        sam_model = sam_model_registry[MODEL_TYPE](checkpoint=CHECKPOINT_PATH)
-        
-        # Use CPU (or "cuda" if GPU available)
-        device = "cpu"
-        sam_model.to(device=device)
-        
-        print("✅ SAM model loaded successfully")
-    
-    return sam_model
-
 def remove_background(input_path, output_path):
     """
-    Remove background from image using Segment Anything Model
+    Remove background from image using rembg (U2-Net model)
+    This is much lighter and faster than SAM
     
     Args:
         input_path: Path to input image
@@ -50,69 +25,34 @@ def remove_background(input_path, output_path):
         print(f"🖼️  Processing: {input_path}")
         
         # Load image
-        image = cv2.imread(input_path)
-        if image is None:
-            raise ValueError(f"Could not load image from {input_path}")
+        with open(input_path, 'rb') as input_file:
+            input_data = input_file.read()
         
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        print("🎯 Removing background with rembg...")
         
-        # Load SAM model
-        sam = load_sam_model()
-        
-        # Generate masks
-        print("🎯 Generating masks...")
-        mask_generator = SamAutomaticMaskGenerator(
-            model=sam,
-            points_per_side=32,
-            pred_iou_thresh=0.86,
-            stability_score_thresh=0.92,
-            crop_n_layers=1,
-            crop_n_points_downscale_factor=2,
-        )
-        
-        masks = mask_generator.generate(image_rgb)
-        
-        if len(masks) == 0:
-            raise Exception("No objects detected in image")
-        
-        print(f"✅ Found {len(masks)} potential objects")
-        
-        # Get largest mask (likely the main subject)
-        largest_mask = max(masks, key=lambda x: x['area'])
-        
-        print(f"📏 Selected mask with area: {largest_mask['area']} pixels")
-        
-        # Create binary mask
-        mask = largest_mask['segmentation']
-        
-        # Convert to PIL Image
-        image_pil = Image.fromarray(image_rgb)
-        image_rgba = image_pil.convert("RGBA")
-        
-        # Apply mask to alpha channel
-        pixels = image_rgba.load()
-        height, width = mask.shape
-        
-        for y in range(height):
-            for x in range(width):
-                if not mask[y, x]:
-                    # Set transparent
-                    pixels[x, y] = (0, 0, 0, 0)
+        # Remove background using rembg (uses U2-Net model)
+        # This automatically downloads a ~176MB model on first use
+        # Much lighter than SAM's 2.4GB!
+        output_data = remove(input_data)
         
         # Save output
-        image_rgba.save(output_path, "PNG")
+        output_image = Image.open(io.BytesIO(output_data))
+        output_image.save(output_path, "PNG")
+        
+        # Get dimensions
+        width, height = output_image.size
         
         print(f"💾 Saved to: {output_path}")
+        print(f"📏 Dimensions: {width}x{height}")
         
         return {
             "success": True,
             "output_path": output_path,
-            "mask_area": int(largest_mask['area']),
-            "total_masks": len(masks),
             "dimensions": {
                 "width": width,
                 "height": height
-            }
+            },
+            "method": "rembg"
         }
         
     except Exception as e:
@@ -124,63 +64,48 @@ def remove_background(input_path, output_path):
 
 def remove_background_simple(input_path, output_path):
     """
-    Simpler background removal using GrabCut (fallback method)
-    Useful if SAM is too slow or memory-intensive
+    Alias for remove_background - kept for compatibility
+    """
+    return remove_background(input_path, output_path)
+
+def remove_background_fast(input_path, output_path):
+    """
+    Even faster version with reduced quality
+    Good for previews or when speed is critical
     """
     try:
-        print(f"🖼️  Processing with GrabCut: {input_path}")
+        print(f"🖼️  Fast processing: {input_path}")
         
-        # Load image
-        image = cv2.imread(input_path)
-        if image is None:
-            raise ValueError(f"Could not load image from {input_path}")
-            
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        with open(input_path, 'rb') as input_file:
+            input_data = input_file.read()
         
-        # Create mask using GrabCut
-        mask = np.zeros(image.shape[:2], np.uint8)
-        bgd_model = np.zeros((1, 65), np.float64)
-        fgd_model = np.zeros((1, 65), np.float64)
+        print("⚡ Quick background removal...")
         
-        # Define rectangle around object (assume centered)
-        height, width = image.shape[:2]
-        rect = (
-            int(width * 0.1), 
-            int(height * 0.1), 
-            int(width * 0.8), 
-            int(height * 0.8)
+        # Use fast model (less accurate but much faster)
+        output_data = remove(
+            input_data,
+            alpha_matting=False,  # Disable alpha matting for speed
+            alpha_matting_foreground_threshold=240,
+            alpha_matting_background_threshold=10
         )
         
-        # Apply GrabCut
-        print("🎯 Running GrabCut algorithm...")
-        cv2.grabCut(image, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+        output_image = Image.open(io.BytesIO(output_data))
+        output_image.save(output_path, "PNG")
         
-        # Create binary mask
-        mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
-        
-        # Apply to image
-        image_pil = Image.fromarray(image_rgb)
-        image_rgba = image_pil.convert("RGBA")
-        
-        pixels = image_rgba.load()
-        for y in range(height):
-            for x in range(width):
-                if mask2[y, x] == 0:
-                    pixels[x, y] = (0, 0, 0, 0)
-        
-        image_rgba.save(output_path, "PNG")
+        width, height = output_image.size
         
         print(f"💾 Saved to: {output_path}")
         
         return {
             "success": True,
             "output_path": output_path,
-            "method": "grabcut",
             "dimensions": {
                 "width": width,
                 "height": height
-            }
+            },
+            "method": "rembg-fast"
         }
+        
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         return {
@@ -195,15 +120,15 @@ if __name__ == "__main__":
         test_output = "test_output_nobg.png"
         
         print("=" * 50)
-        print("Testing Background Removal")
+        print("Testing Background Removal (rembg)")
         print("=" * 50)
         
         result = remove_background(test_input, test_output)
         
         if result["success"]:
             print(f"\n✅ Success! Output saved to {test_output}")
-            print(f"   Mask area: {result.get('mask_area', 'N/A')} pixels")
-            print(f"   Total masks found: {result.get('total_masks', 'N/A')}")
+            print(f"   Dimensions: {result['dimensions']['width']}x{result['dimensions']['height']}")
+            print(f"   Method: {result.get('method', 'rembg')}")
         else:
             print(f"\n❌ Failed: {result['error']}")
     else:

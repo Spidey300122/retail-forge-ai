@@ -10,11 +10,14 @@ import uuid
 import time
 
 # Import our processing functions
-from image_processing.background_removal import remove_background, remove_background_simple
+from image_processing.background_removal import (
+    remove_background, 
+    remove_background_fast
+)
 from image_processing.color_extraction import extract_colors
 from image_processing.optimization import optimize_image
 
-# New imports for background generation
+# Background generation imports
 from image_processing.background_generation import generate_background, save_generated_background
 
 load_dotenv()
@@ -39,27 +42,28 @@ os.makedirs("temp/processed", exist_ok=True)
 async def health_check():
     return {
         "status": "healthy",
-        "service": "Image Processing Service",
+        "service": "Image Processing Service (rembg)",
         "timestamp": datetime.utcnow().isoformat(),
         "endpoints": [
             "/process/remove-background",
             "/process/extract-colors",
             "/process/optimize",
             "/process/generate-background"
-        ]
+        ],
+        "note": "Using lightweight rembg instead of SAM"
     }
 
 
 # -----------------------------------------------------------
-# BACKGROUND REMOVAL
+# BACKGROUND REMOVAL (FIXED - NOW FAST!)
 # -----------------------------------------------------------
 
 @app.post("/process/remove-background")
 async def remove_bg_endpoint(
     file: UploadFile = File(...),
-    method: str = "sam"  # "sam" or "simple"
+    method: str = "fast"  # "standard" or "fast"
 ):
-    """Remove background from uploaded image."""
+    """Remove background from uploaded image using rembg."""
     start_time = time.time()
 
     try:
@@ -80,18 +84,20 @@ async def remove_bg_endpoint(
             os.remove(input_path)
             raise HTTPException(400, "File too large (max 10MB)")
 
-        # Process
-        if method == "sam":
-            print("🎨 Using SAM background removal…")
-            result = remove_background(input_path, output_path)
+        # Process with rembg (much faster than SAM!)
+        if method == "fast":
+            print("⚡ Using fast background removal...")
+            result = remove_background_fast(input_path, output_path)
         else:
-            print("🎨 Using GrabCut background removal…")
-            result = remove_background_simple(input_path, output_path)
+            print("🎨 Using standard background removal...")
+            result = remove_background(input_path, output_path)
 
         if not result["success"]:
             raise HTTPException(500, result["error"])
 
         processing_time = time.time() - start_time
+
+        print(f"✅ Completed in {processing_time:.2f} seconds")
 
         return {
             "success": True,
@@ -99,10 +105,8 @@ async def remove_bg_endpoint(
             "output_filename": f"{file_id}_nobg.png",
             "download_url": f"/process/download/{file_id}_nobg.png",
             "metadata": {
-                "mask_area": result.get("mask_area"),
-                "total_masks": result.get("total_masks"),
                 "dimensions": result.get("dimensions"),
-                "method": method,
+                "method": result.get("method", "rembg"),
                 "processing_time_seconds": round(processing_time, 2)
             }
         }
@@ -113,6 +117,7 @@ async def remove_bg_endpoint(
         print(f"❌ Error in remove_bg_endpoint: {e}")
         raise HTTPException(500, str(e))
     finally:
+        # Clean up input file
         if os.path.exists(input_path):
             try:
                 os.remove(input_path)
@@ -220,7 +225,7 @@ async def optimize_endpoint(
 
 
 # -----------------------------------------------------------
-# BACKGROUND GENERATION (NEW ENDPOINT)
+# BACKGROUND GENERATION
 # -----------------------------------------------------------
 
 @app.post("/process/generate-background")
@@ -304,6 +309,7 @@ async def cleanup_temp_files():
                 file_path = os.path.join(folder, filename)
 
                 if os.path.isfile(file_path):
+                    # Delete files older than 1 hour
                     if time.time() - os.path.getmtime(file_path) > 3600:
                         try:
                             os.remove(file_path)
@@ -320,11 +326,12 @@ if __name__ == "__main__":
     port = int(os.getenv("IMAGE_SERVICE_PORT", 8000))
 
     print("=" * 60)
-    print("🚀 Starting Retail Forge AI - Image Processing Service")
+    print("🚀 Retail Forge AI - Image Processing Service")
     print("=" * 60)
     print(f"📍 Port: {port}")
     print(f"📁 Temp folders: temp/uploads, temp/processed")
     print(f"🔗 Health: http://localhost:{port}/health")
+    print("⚡ Using lightweight rembg (no more SAM hangs!)")
     print("=" * 60)
 
     uvicorn.run(

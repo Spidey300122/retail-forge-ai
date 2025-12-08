@@ -10,7 +10,7 @@ const useCanvasStore = create((set, get) => ({
     future: [],
   },
   zoom: 100,
-  _shouldSave: true, // Renamed with underscore prefix to satisfy ESLint
+  _shouldSave: true,
 
   // Set canvas instance
   setCanvas: (canvas) => set({ canvas }),
@@ -23,16 +23,28 @@ const useCanvasStore = create((set, get) => ({
     // Temporarily disable history saving
     set({ _shouldSave: false });
     
+    // Clear all objects
     canvas.clear();
     canvas.backgroundColor = '#ffffff';
     canvas.renderAll();
     
+    // Reset history completely
+    set({
+      history: {
+        past: [],
+        future: []
+      }
+    });
+    
     // Re-enable history saving
     set({ _shouldSave: true });
     
-    // Save the cleared state
-    get().saveState();
-    console.log('🗑️ Canvas cleared');
+    // Save the initial cleared state
+    setTimeout(() => {
+      get().saveState();
+    }, 0);
+    
+    console.log('🗑️ Canvas cleared and history reset');
   },
 
   // Save state for undo/redo
