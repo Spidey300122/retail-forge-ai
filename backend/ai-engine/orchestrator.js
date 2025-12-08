@@ -1,50 +1,61 @@
 import * as creativeDirector from './agents/creativeDirector.js';
 import * as complianceOfficer from './agents/complianceOfficer.js';
+import ruleEngine from './compliance/ruleEngine.js';
 import logger from '../utils/logger.js';
 
 /**
- * AI Agent Orchestrator
- * Coordinates multiple AI agents to work together
+ * AI Agent Orchestrator - FIXED Multi-Agent System
+ * Coordinates ALL AI agents: layouts, copy, validation, backgrounds
  */
 class AIOrchestrator {
   constructor() {
     this.agents = {
       creative: creativeDirector,
       compliance: complianceOfficer,
+      validation: ruleEngine,
     };
-    logger.info('AI Orchestrator initialized');
+    logger.info('AI Orchestrator initialized with ALL agents');
   }
 
   /**
-   * Analyze user intent from natural language input
+   * Analyze user intent - ENHANCED with ALL capabilities
    */
   async analyzeIntent(userInput) {
     try {
       logger.info('Analyzing user intent', { input: userInput });
 
-      // IMPROVED: Broader keyword matching to catch natural language requests
+      const lowerInput = userInput.toLowerCase();
+
       const intent = {
-        // Added: create, generate, make, build, banner, post, creative, instagram, facebook
-        needsLayout: /layout|design|arrange|position|create|generate|make|build|banner|post|story|creative|instagram|facebook/i.test(userInput),
+        // Layout keywords - EXPANDED
+        needsLayout: /layout|design|arrange|position|create|generate|make|build|banner|post|story|creative|instagram|facebook|compose|template|structure/i.test(lowerInput),
         
-        // Added: caption, slogan, tagline, description, message
-        needsCopy: /copy|text|headline|write|content|caption|slogan|tagline|description|message/i.test(userInput),
+        // Copy keywords - EXPANDED
+        needsCopy: /copy|text|headline|write|content|caption|slogan|tagline|description|message|wording|phrase|title|subtitle/i.test(lowerInput),
         
-        // Added: scene, environment
-        needsBackground: /background|backdrop|bg|scene|environment/i.test(userInput),
+        // Background keywords - NEW
+        needsBackground: /background|backdrop|bg|scene|environment|generate background|create background|design background|new background|custom background/i.test(lowerInput),
         
-        // Added: safe
-        needsCompliance: /check|validate|compliant|rules|safe/i.test(userInput),
+        // Validation keywords - NEW
+        needsCompliance: /check|validate|compliant|rules|safe|verify|test|review|compliance|approval|guidelines|standards|quality/i.test(lowerInput),
         
         category: this.detectCategory(userInput),
         style: this.detectStyle(userInput),
       };
 
-      // Fallback: If nothing specific detected but input exists, assume they want a layout
-      // This fixes the "instant empty response" for generic queries
-      if (!intent.needsLayout && !intent.needsCopy && !intent.needsBackground && userInput.length > 5) {
-        logger.info('No specific intent keywords detected, defaulting to layout generation');
-        intent.needsLayout = true;
+      // Fallback: If nothing detected and input exists, infer from context
+      if (!intent.needsLayout && !intent.needsCopy && !intent.needsBackground && !intent.needsCompliance && userInput.length > 5) {
+        // Check if asking for "everything" or "complete"
+        if (/complete|full|entire|everything|all/i.test(lowerInput)) {
+          logger.info('User wants complete solution - enabling all agents');
+          intent.needsLayout = true;
+          intent.needsCopy = true;
+          intent.needsCompliance = true;
+        } else {
+          // Default to layout if ambiguous
+          logger.info('Ambiguous request, defaulting to layout generation');
+          intent.needsLayout = true;
+        }
       }
 
       logger.info('Intent analyzed', intent);
@@ -56,15 +67,16 @@ class AIOrchestrator {
   }
 
   /**
-   * Detect product category from input
+   * Detect product category
    */
   detectCategory(input) {
     const categories = {
-      beverages: /drink|juice|soda|beverage|water|coffee|tea/i,
-      food: /food|snack|meal|eat|bread|cheese/i,
-      beauty: /beauty|makeup|cosmetic|skincare|lotion/i,
-      electronics: /electronic|phone|laptop|tech|gadget/i,
-      fashion: /fashion|clothing|apparel|shirt|dress/i,
+      beverages: /drink|juice|soda|beverage|water|coffee|tea|beer|wine|alcohol/i,
+      food: /food|snack|meal|eat|bread|cheese|grocery|recipe/i,
+      beauty: /beauty|makeup|cosmetic|skincare|lotion|shampoo|perfume/i,
+      electronics: /electronic|phone|laptop|tech|gadget|computer|device/i,
+      fashion: /fashion|clothing|apparel|shirt|dress|shoes|accessories/i,
+      home: /home|furniture|decor|kitchen|bedroom|garden/i,
     };
 
     for (const [category, regex] of Object.entries(categories)) {
@@ -75,15 +87,16 @@ class AIOrchestrator {
   }
 
   /**
-   * Detect style preference from input
+   * Detect style preference
    */
   detectStyle(input) {
     const styles = {
-      modern: /modern|contemporary|sleek/i,
-      minimal: /minimal|simple|clean/i,
-      vibrant: /vibrant|colorful|bold/i,
-      elegant: /elegant|sophisticated|classy/i,
-      playful: /playful|fun|casual/i,
+      modern: /modern|contemporary|sleek|minimalist/i,
+      minimal: /minimal|simple|clean|basic/i,
+      vibrant: /vibrant|colorful|bold|bright/i,
+      elegant: /elegant|sophisticated|classy|premium/i,
+      playful: /playful|fun|casual|friendly/i,
+      professional: /professional|corporate|business|formal/i,
     };
 
     for (const [style, regex] of Object.entries(styles)) {
@@ -94,7 +107,7 @@ class AIOrchestrator {
   }
 
   /**
-   * Process creative request with multiple agents
+   * Process creative request - ENHANCED with ALL agents
    */
   async processCreativeRequest(request) {
     try {
@@ -104,7 +117,8 @@ class AIOrchestrator {
         intent: null,
         layouts: null,
         copy: null,
-        compliance: null,
+        validation: null,
+        background: null,
         recommendations: [],
       };
 
@@ -112,36 +126,38 @@ class AIOrchestrator {
       results.intent = await this.analyzeIntent(request.userInput || '');
 
       // Step 2: Generate layouts if needed
-      if (results.intent.needsLayout) {
-        // Use provided image or fallback to placeholder if missing (prevents crashing)
-        const imageUrl = request.productImageUrl || "https://placehold.co/600x600?text=Product";
-        
+      if (results.intent.needsLayout && request.productImageUrl) {
         try {
           const layoutResult = await creativeDirector.suggestLayouts(
-            imageUrl,
+            request.productImageUrl,
             results.intent.category,
             results.intent.style
           );
           results.layouts = layoutResult.layouts;
           results.recommendations.push({
-            type: 'success', // Changed from 'layout' for better UI mapping
-            message: `Generated ${layoutResult.layouts.length} layout options in "Layouts" tab`,
+            type: 'success',
+            message: `✨ Generated ${layoutResult.layouts.length} layout options → Check "Layouts" tab`,
           });
         } catch (error) {
           logger.warn('Layout generation failed', error);
           results.recommendations.push({
             type: 'warning',
-            message: 'Could not generate layouts. Please check image URL.',
+            message: '⚠️ Could not generate layouts. Check image URL or try again.',
           });
         }
+      } else if (results.intent.needsLayout && !request.productImageUrl) {
+        results.recommendations.push({
+          type: 'info',
+          message: '💡 Tip: Add an image to the canvas first for AI layout suggestions.',
+        });
       }
 
       // Step 3: Generate copy if needed
       if (results.intent.needsCopy) {
-        // Use provided info or sensible defaults
         const productInfo = request.productInfo || {
-            name: "New Product",
-            category: results.intent.category
+          name: request.productName || "New Product",
+          category: results.intent.category,
+          features: [],
         };
 
         try {
@@ -151,52 +167,74 @@ class AIOrchestrator {
           );
           results.copy = copyResult;
           results.recommendations.push({
-            type: 'success', // Changed from 'copy'
-            message: `Generated ${copyResult.length} copy variations in "Copy" tab`,
+            type: 'success',
+            message: `✍️ Generated ${copyResult.length} copy variations → Check "Copy" tab`,
           });
         } catch (error) {
           logger.warn('Copy generation failed', error);
           results.recommendations.push({
             type: 'warning',
-            message: 'Could not generate copy. Please provide product details.',
+            message: '⚠️ Could not generate copy. Provide product details in "Copy" tab.',
           });
         }
       }
 
-      // Step 4: Validate compliance if content exists
-      if (request.creativeData) {
+      // Step 4: NEW - Validate compliance if requested or if creative data exists
+      if (results.intent.needsCompliance || request.creativeData) {
         try {
-          const complianceResult = await this.validateCompliance(request.creativeData);
-          results.compliance = complianceResult;
+          const creativeData = request.creativeData || this.extractCreativeDataFromRequest(request);
           
-          if (!complianceResult.isCompliant) {
-            results.recommendations.push({
-              type: 'warning', // Changed from 'compliance'
-              message: `Found ${complianceResult.violations.length} compliance issues`,
-              violations: complianceResult.violations,
-            });
+          if (creativeData && creativeData.elements && creativeData.elements.length > 0) {
+            const validationResult = await ruleEngine.validateAll(creativeData);
+            results.validation = validationResult;
+            
+            if (validationResult.isCompliant) {
+              results.recommendations.push({
+                type: 'success',
+                message: `✅ Compliance check passed! Score: ${validationResult.score}/100`,
+              });
+            } else {
+              results.recommendations.push({
+                type: 'warning',
+                message: `⚠️ Found ${validationResult.violations.length} compliance issue(s) → Check "Validate" tab`,
+                violations: validationResult.violations.slice(0, 3), // Top 3
+              });
+            }
           } else {
-             results.recommendations.push({
-              type: 'success',
-              message: `Compliance check passed`,
+            results.recommendations.push({
+              type: 'info',
+              message: '💡 Add elements to canvas to run compliance validation.',
             });
           }
         } catch (error) {
-          logger.warn('Compliance check failed', error);
+          logger.warn('Validation failed', error);
+          results.recommendations.push({
+            type: 'warning',
+            message: '⚠️ Compliance check failed. Try again or check "Validate" tab.',
+          });
         }
       }
-      
-      // If nothing was generated, add a hint
+
+      // Step 5: NEW - Background generation suggestion
+      if (results.intent.needsBackground) {
+        results.recommendations.push({
+          type: 'info',
+          message: '🎨 To generate custom backgrounds, go to "Gen BG" tab and describe your ideal background.',
+        });
+      }
+
+      // Step 6: If nothing was generated, provide helpful guidance
       if (results.recommendations.length === 0) {
-         results.recommendations.push({
-            type: 'info',
-            message: 'I understood your request but need more details (like an image or product name) to generate assets.',
-          });
+        results.recommendations.push({
+          type: 'info',
+          message: '🤔 I understood your request but need more context. Try:\n• Upload an image for layout suggestions\n• Provide product name for copy\n• Add elements to validate compliance',
+        });
       }
 
       logger.info('Creative request processed', { 
         hasLayouts: !!results.layouts,
         hasCopy: !!results.copy,
+        hasValidation: !!results.validation,
         recommendations: results.recommendations.length 
       });
 
@@ -208,38 +246,51 @@ class AIOrchestrator {
   }
 
   /**
-   * Validate compliance for creative data
+   * NEW - Extract creative data from request context
+   */
+  extractCreativeDataFromRequest(request) {
+    // If explicit creative data provided
+    if (request.creativeData) return request.creativeData;
+
+    // Try to construct minimal creative data from context
+    const data = {
+      format: 'instagram_post',
+      backgroundColor: '#ffffff',
+      text: '',
+      headline: '',
+      subhead: '',
+      elements: [],
+      category: request.category || 'general',
+      isAlcohol: false,
+    };
+
+    // Add text from copy if available
+    if (request.productInfo) {
+      data.text = request.productInfo.name || '';
+      data.headline = request.productInfo.name || '';
+    }
+
+    return data;
+  }
+
+  /**
+   * Validate compliance for creative data - ENHANCED
    */
   async validateCompliance(creativeData) {
     try {
-      const violations = [];
-      const warnings = [];
+      logger.info('Running comprehensive compliance validation');
+      
+      // Use the rule engine directly
+      const validationResult = await ruleEngine.validateAll(creativeData);
+      
+      logger.info('Validation complete', {
+        compliant: validationResult.isCompliant,
+        score: validationResult.score,
+        violations: validationResult.violations.length,
+        warnings: validationResult.warnings.length,
+      });
 
-      // Check text content if exists
-      if (creativeData.text) {
-        const textValidation = await complianceOfficer.validateCopy(creativeData.text);
-        
-        if (!textValidation.isCompliant) {
-          violations.push(...textValidation.violations);
-        }
-      }
-
-      // Check font size
-      if (creativeData.fontSize && creativeData.fontSize < 20) {
-        violations.push({
-          type: 'min_font_size',
-          severity: 'error',
-          message: 'Font size must be at least 20px',
-          suggestion: 'Increase font size to 20px or larger',
-        });
-      }
-
-      return {
-        isCompliant: violations.length === 0,
-        violations,
-        warnings,
-        score: violations.length === 0 ? 100 : Math.max(0, 100 - violations.length * 20),
-      };
+      return validationResult;
     } catch (error) {
       logger.error('Compliance validation failed', error);
       throw error;
@@ -255,54 +306,88 @@ class AIOrchestrator {
 
       const suggestions = [];
 
-      // Check image quality
-      if (creativeData.images) {
-        creativeData.images.forEach((img, index) => {
-          if (img.width < 800 || img.height < 800) {
-            suggestions.push({
-              type: 'quality',
-              element: `image_${index}`,
-              message: 'Image resolution is low. Use higher quality images for better results.',
-            });
-          }
+      // Run validation first
+      const validationResult = await this.validateCompliance(creativeData);
+      
+      // Add validation issues as suggestions
+      if (!validationResult.isCompliant) {
+        validationResult.violations.forEach(v => {
+          suggestions.push({
+            type: 'compliance',
+            severity: 'high',
+            message: v.message,
+            suggestion: v.suggestion,
+            category: v.category,
+          });
         });
       }
 
-      // Check text readability
+      // Check image quality
       if (creativeData.elements) {
         creativeData.elements.forEach((el, index) => {
-          if (el.type === 'text' && el.fontSize < 24) {
-            suggestions.push({
-              type: 'readability',
-              element: `text_${index}`,
-              message: `Consider increasing font size to 24px for better readability.`,
-            });
+          if (el.type === 'image') {
+            if (el.width < 800 || el.height < 800) {
+              suggestions.push({
+                type: 'quality',
+                severity: 'medium',
+                element: `image_${index}`,
+                message: 'Image resolution is low. Use higher quality images (min 800x800px).',
+              });
+            }
+          }
+
+          if (el.type === 'text' || el.type === 'i-text') {
+            if (el.fontSize < 24) {
+              suggestions.push({
+                type: 'readability',
+                severity: 'medium',
+                element: `text_${index}`,
+                message: `Consider increasing font size to 24px for better readability (current: ${el.fontSize}px).`,
+              });
+            }
           }
         });
       }
 
       // Check color contrast
-      if (creativeData.backgroundColor && creativeData.textColor) {
-        const contrast = this.calculateContrast(
-          creativeData.backgroundColor,
-          creativeData.textColor
+      if (creativeData.backgroundColor && creativeData.elements) {
+        const textElements = creativeData.elements.filter(
+          el => (el.type === 'text' || el.type === 'i-text') && el.fill
         );
-        
-        if (contrast < 4.5) {
-          suggestions.push({
-            type: 'contrast',
-            message: 'Text color contrast is low. Improve contrast for better accessibility.',
-            currentContrast: contrast.toFixed(2),
-            minimumRequired: 4.5,
-          });
-        }
+
+        textElements.forEach((el, index) => {
+          const contrast = this.calculateContrast(
+            creativeData.backgroundColor,
+            el.fill
+          );
+          
+          if (contrast < 4.5) {
+            suggestions.push({
+              type: 'contrast',
+              severity: 'high',
+              element: `text_${index}`,
+              message: `Text contrast is low (${contrast.toFixed(2)}:1). Minimum required: 4.5:1.`,
+              currentContrast: contrast.toFixed(2),
+              minimumRequired: 4.5,
+            });
+          }
+        });
       }
 
-      logger.info('Improvement suggestions generated', { count: suggestions.length });
+      // Calculate overall score
+      const criticalIssues = suggestions.filter(s => s.severity === 'high').length;
+      const mediumIssues = suggestions.filter(s => s.severity === 'medium').length;
+      const overallScore = Math.max(0, 100 - (criticalIssues * 15) - (mediumIssues * 5));
+
+      logger.info('Improvement suggestions generated', { 
+        count: suggestions.length,
+        score: overallScore,
+      });
 
       return {
         suggestions,
-        overallScore: Math.max(0, 100 - suggestions.length * 10),
+        overallScore,
+        validationScore: validationResult.score,
       };
     } catch (error) {
       logger.error('Improvement analysis failed', error);
