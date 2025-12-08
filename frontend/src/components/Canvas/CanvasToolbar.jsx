@@ -1,11 +1,12 @@
 // frontend/src/components/Canvas/CanvasToolbar.jsx
 import { useState } from 'react';
-import { Undo, Redo, Trash2, Download, X, Check, Package, Shield, Loader } from 'lucide-react';
+import { Undo, Redo, Trash2, Download, X, Check, Package, Shield, Loader, AlertCircle, Info, CheckCircle, Lightbulb } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
 import toast from 'react-hot-toast';
 import './CanvasToolbar.css';
 import Tooltip from '../UI/Tooltip';
-// Add ValidationModal component definition here (after imports, before ExportModal)
+
+// Validation Modal Component
 function ValidationModal({ isOpen, onClose, validationResults, isValidating }) {
   if (!isOpen) return null;
 
@@ -78,6 +79,7 @@ function ValidationModal({ isOpen, onClose, validationResults, isValidating }) {
     </div>
   );
 }
+
 // Export formats configuration
 const AVAILABLE_FORMATS = [
   { id: 'instagram_post', name: 'Instagram Post', dims: '1080 x 1080', width: 1080, height: 1080 },
@@ -516,18 +518,26 @@ function CanvasToolbar({ isReady }) {
         <div className="toolbar-spacer" />
 
         {/* Validate button */}
-        <Tooltip text="Check Compliance">
-          <button
-            onClick={handleValidate}
-            disabled={!isReady}
-            className="toolbar-btn"
-            style={{
-              marginRight: '8px'
-            }}
-          >
-            <Shield size={20} />
-          </button>
-        </Tooltip>
+        <button
+          onClick={handleValidate}
+          disabled={!isReady}
+          className="toolbar-export"
+          style={{
+            marginRight: '8px',
+            backgroundColor: '#7c3aed'
+          }}
+          onMouseEnter={(e) => {
+            if (!isReady) return;
+            e.target.style.backgroundColor = '#6d28d9';
+          }}
+          onMouseLeave={(e) => {
+            if (!isReady) return;
+            e.target.style.backgroundColor = '#7c3aed';
+          }}
+        >
+          <Shield size={18} />
+          <span>Validate</span>
+        </button>
 
         {/* Export button */}
         <button

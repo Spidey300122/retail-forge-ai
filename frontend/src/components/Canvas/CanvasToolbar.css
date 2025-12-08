@@ -1,28 +1,28 @@
-/* Toolbar Container */
+/* Toolbar Container - FIXED FOR 100% ZOOM */
 .canvas-toolbar {
-  height: 64px;
+  height: 56px; /* Reduced from 64px */
   background-color: white;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  gap: 8px;
+  padding: 0 12px;
+  gap: 6px;
   flex-shrink: 0;
-  position: relative; /* Added */
-  z-index: 20; /* Above sidebars */
+  position: relative;
+  z-index: 20;
 }
 
-/* Logo */
+/* Logo - More Compact */
 .toolbar-logo {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-right: 32px;
+  margin-right: 20px;
 }
 
 .logo-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background-color: #2563eb;
   border-radius: 4px;
   display: flex;
@@ -30,24 +30,24 @@
   justify-content: center;
   color: white;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .logo-text {
   font-weight: 600;
   color: #1f2937;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 /* Tools */
 .toolbar-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .toolbar-btn {
-  padding: 8px;
+  padding: 7px;
   border: none;
   border-radius: 4px;
   background-color: transparent;
@@ -57,6 +57,11 @@
   align-items: center;
   justify-content: center;
   color: #1f2937;
+}
+
+.toolbar-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .toolbar-btn:hover:not(:disabled) {
@@ -69,13 +74,13 @@
 }
 
 .toolbar-btn-text {
-  padding: 8px 12px;
+  padding: 7px 10px;
   border: none;
   border-radius: 4px;
   background-color: transparent;
   cursor: pointer;
   transition: background-color 0.2s;
-  font-size: 14px;
+  font-size: 13px;
   color: #1f2937;
 }
 
@@ -90,9 +95,9 @@
 
 .toolbar-divider {
   width: 1px;
-  height: 24px;
+  height: 20px;
   background-color: #d1d5db;
-  margin: 0 8px;
+  margin: 0 6px;
 }
 
 /* Spacer */
@@ -100,20 +105,25 @@
   flex: 1;
 }
 
-/* Export Button */
+/* Export & Validate Buttons - More Compact */
 .toolbar-export {
-  padding: 8px 16px;
+  padding: 7px 14px;
   background-color: #2563eb;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.2s;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 6px;
+  font-size: 13px;
   font-weight: 500;
+}
+
+.toolbar-export svg {
+  width: 16px;
+  height: 16px;
 }
 
 .toolbar-export:hover:not(:disabled) {
@@ -123,4 +133,32 @@
 .toolbar-export:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Responsive toolbar */
+@media (max-width: 1600px) {
+  .canvas-toolbar {
+    height: 52px;
+    padding: 0 10px;
+  }
+  
+  .logo-text {
+    font-size: 14px;
+  }
+  
+  .toolbar-btn-text {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+  
+  .toolbar-export {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .canvas-toolbar {
+    height: 60px;
+  }
 }
