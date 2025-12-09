@@ -1,4 +1,4 @@
-/* CanvasEditor Layout - FIXED FOR 100% ZOOM */
+/* CanvasEditor Layout - FIXED SCALING */
 .canvas-editor-root {
   display: flex;
   flex-direction: column;
@@ -17,7 +17,7 @@
   position: relative;
 }
 
-/* Center canvas area - FIXED SCALING */
+/* Center canvas area - RESPONSIVE SCALING */
 .canvas-editor-center {
   flex: 1;
   display: flex;
@@ -25,10 +25,10 @@
   justify-content: center;
   padding: 20px;
   background-color: #e5e7eb;
-  overflow: auto;
+  overflow: hidden; /* Changed from auto to hidden */
   position: relative;
   z-index: 1;
-  min-width: 0; /* Important for flex shrinking */
+  min-width: 0;
 }
 
 .canvas-wrapper {
@@ -36,16 +36,13 @@
   background: white;
   border-radius: 4px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  /* Scale down canvas to fit viewport */
-  transform: scale(0.75);
+  /* Scale canvas to fit available space */
   transform-origin: center center;
 }
 
 .canvas-wrapper canvas {
   display: block;
   border: 1px solid #e5e7eb;
-  max-width: 100%;
-  max-height: 100%;
 }
 
 /* Status bar */
@@ -65,21 +62,38 @@
   margin: 0 16px;
 }
 
-/* Responsive scaling for different zoom levels */
+/* Responsive adjustments for different screen sizes */
 @media (max-width: 1600px) {
   .canvas-wrapper {
-    transform: scale(0.65);
+    transform: scale(0.45);
   }
 }
 
 @media (max-width: 1400px) {
   .canvas-wrapper {
-    transform: scale(0.55);
+    transform: scale(0.35);
+  }
+}
+
+@media (min-width: 1601px) and (max-width: 1919px) {
+  .canvas-wrapper {
+    transform: scale(0.5);
   }
 }
 
 @media (min-width: 1920px) {
   .canvas-wrapper {
-    transform: scale(0.85);
+    transform: scale(0.55);
   }
+}
+
+@media (min-width: 2560px) {
+  .canvas-wrapper {
+    transform: scale(0.7);
+  }
+}
+
+/* Ensure right sidebar is always visible */
+.canvas-editor-content > *:last-child {
+  flex-shrink: 0;
 }

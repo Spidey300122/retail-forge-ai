@@ -17,9 +17,9 @@ function CanvasEditor() {
   const fabricCanvasRef = useRef(null);
   const { setCanvas, saveState } = useCanvasStore();
   const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // <-- ADDED
+  const [isLoading, setIsLoading] = useState(true);
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 1080, height: 1080 });
 
-  // Enable keyboard shortcuts
   useKeyboard();
 
   useEffect(() => {
@@ -45,7 +45,6 @@ function CanvasEditor() {
       borderScaleFactor: 2,
     });
 
-    // Performance optimizations
     fabricCanvas.on('object:moving', () => {
       fabricCanvas.renderOnAddRemove = false;
     });
@@ -63,7 +62,8 @@ function CanvasEditor() {
     setTimeout(() => {
       setCanvas(fabricCanvas);
       setIsReady(true);
-      setIsLoading(false); // <-- ADDED
+      setIsLoading(false);
+      setCanvasDimensions({ width: fabricCanvas.width, height: fabricCanvas.height });
     }, 0);
 
     return () => {
@@ -179,7 +179,7 @@ function CanvasEditor() {
   return (
     <div className="canvas-editor-root">
 
-      {/* LOADING OVERLAY ADDED */}
+      {/* LOADING OVERLAY */}
       {isLoading && (
         <div style={{
           position: 'fixed',
@@ -211,8 +211,11 @@ function CanvasEditor() {
         </div>
       )}
 
-      {/* Toolbar */}
-      <CanvasToolbar isReady={isReady} />
+      {/* Toolbar with Format Selector */}
+      <CanvasToolbar 
+        isReady={isReady}
+        onDimensionsChange={(dimensions) => setCanvasDimensions(dimensions)}
+      />
 
       {/* Main Content */}
       <div className="canvas-editor-content">
@@ -236,7 +239,7 @@ function CanvasEditor() {
 
       {/* Status Bar */}
       <div className="canvas-editor-status">
-        <span>Canvas: 1080x1080px</span>
+        <span>Canvas: {canvasDimensions.width}x{canvasDimensions.height}px</span>
         <span className="separator">|</span>
         <span>{isReady ? '✅ Ready' : '⏳ Initializing...'}</span>
       </div>
