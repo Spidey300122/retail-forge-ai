@@ -1,4 +1,6 @@
-import { ComplianceRule } from '../ComplianceRule.js'; // Updated import path
+// backend/ai-engine/compliance/rules/designRules.js
+
+import { ComplianceRule } from '../ComplianceRule.js';
 
 /**
  * Rule 9: Minimum Font Size
@@ -10,18 +12,11 @@ export class MinimumFontSizeRule extends ComplianceRule {
 
   validate(creativeData) {
     const violations = [];
-    
-    // Default minimum is 20px
-    let minSize = 20;
-    
-    // Adjust based on format
-    if (creativeData.format === 'checkout_single_density') {
-      minSize = 10;
-    } else if (creativeData.format === 'says') {
-      minSize = 12;
-    }
 
-    // Check all text elements
+    let minSize = 20;
+    if (creativeData.format === 'checkout_single_density') minSize = 10;
+    else if (creativeData.format === 'says') minSize = 12;
+
     if (creativeData.elements) {
       creativeData.elements.forEach((el, index) => {
         if ((el.type === 'text' || el.type === 'i-text') && el.fontSize) {
@@ -39,7 +34,7 @@ export class MinimumFontSizeRule extends ComplianceRule {
     if (violations.length > 0) {
       return {
         passed: false,
-        message: `${violations.length} text element(s) below minimum ${minSize}px font size`,
+        message: `${violations.length} text element(s) below minimum ${minSize}px`,
         suggestion: `Increase font size to at least ${minSize}px`,
         affectedElements: violations,
       };
@@ -59,11 +54,8 @@ export class WCAGContrastRule extends ComplianceRule {
 
   validate(creativeData) {
     const violations = [];
-    const minContrast = 4.5; // WCAG AA standard
 
-    if (!creativeData.backgroundColor) {
-      return { passed: true }; // Can't check without background
-    }
+    if (!creativeData.backgroundColor) return { passed: true };
 
     if (creativeData.elements) {
       creativeData.elements.forEach((el, index) => {
@@ -73,9 +65,10 @@ export class WCAGContrastRule extends ComplianceRule {
             el.fill
           );
 
-          // Large text (18pt+/14pt+ bold) only needs 3:1
-          const isLargeText = el.fontSize >= 24 || (el.fontSize >= 18 && el.fontWeight === 'bold');
-          const requiredContrast = isLargeText ? 3.0 : 4.5;
+          const isLarge =
+            el.fontSize >= 24 || (el.fontSize >= 18 && el.fontWeight === 'bold');
+
+          const requiredContrast = isLarge ? 3.0 : 4.5;
 
           if (contrast < requiredContrast) {
             violations.push({
@@ -93,8 +86,8 @@ export class WCAGContrastRule extends ComplianceRule {
     if (violations.length > 0) {
       return {
         passed: false,
-        message: `${violations.length} text element(s) fail WCAG contrast standards`,
-        suggestion: 'Increase color contrast between text and background',
+        message: `${violations.length} text items fail WCAG contrast`,
+        suggestion: 'Increase contrast between text and background',
         affectedElements: violations,
       };
     }
@@ -109,7 +102,7 @@ export class WCAGContrastRule extends ComplianceRule {
       const g = ((rgb >> 8) & 0xff) / 255;
       const b = (rgb & 0xff) / 255;
 
-      const [rs, gs, bs] = [r, g, b].map(c =>
+      const [rs, gs, bs] = [r, g, b].map((c) =>
         c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
       );
 
@@ -134,35 +127,25 @@ export class ValueTilePositionRule extends ComplianceRule {
   }
 
   validate(creativeData) {
-    if (!creativeData.valueTile) {
-      return { passed: true }; // No value tile to check
-    }
+    if (!creativeData.valueTile) return { passed: true };
 
     const vt = creativeData.valueTile;
-    
-    // Value tiles have predefined positions based on format
-    const positions = {
-      'instagram_post': { x: 100, y: 100 },
-      'facebook_feed': { x: 100, y: 50 },
-      // Add more formats as needed
+
+    const formats = {
+      instagram_post: { x: 100, y: 100 },
+      facebook_feed: { x: 100, y: 50 },
     };
 
-    const expectedPos = positions[creativeData.format];
-    
-    if (!expectedPos) {
-      return { passed: true }; // Unknown format, skip
-    }
+    const expected = formats[creativeData.format];
+    if (!expected) return { passed: true };
 
-    const tolerance = 5; // 5px tolerance
-    
-    if (
-      Math.abs(vt.x - expectedPos.x) > tolerance ||
-      Math.abs(vt.y - expectedPos.y) > tolerance
-    ) {
+    const tolerance = 5;
+
+    if (Math.abs(vt.x - expected.x) > tolerance || Math.abs(vt.y - expected.y) > tolerance) {
       return {
         passed: false,
-        message: 'Value tile is not in predefined position',
-        suggestion: `Move value tile to position (${expectedPos.x}, ${expectedPos.y})`,
+        message: 'Value tile not in correct position',
+        suggestion: `Move value tile to (${expected.x}, ${expected.y})`,
       };
     }
 
@@ -179,30 +162,19 @@ export class NoOverlayRule extends ComplianceRule {
   }
 
   validate(creativeData) {
-    const criticalElements = [];
-    
-    if (creativeData.valueTile) {
-      criticalElements.push({ ...creativeData.valueTile, name: 'value_tile' });
-    }
-    
-    if (creativeData.cta) {
-      criticalElements.push({ ...creativeData.cta, name: 'cta' });
-    }
-    
-    if (creativeData.tag) {
-      criticalElements.push({ ...creativeData.tag, name: 'tag' });
-    }
+    const critical = [];
+
+    if (creativeData.valueTile) critical.push({ ...creativeData.valueTile, name: 'value_tile' });
+    if (creativeData.cta) critical.push({ ...creativeData.cta, name: 'cta' });
+    if (creativeData.tag) critical.push({ ...creativeData.tag, name: 'tag' });
 
     const violations = [];
-    
+
     if (creativeData.elements) {
       creativeData.elements.forEach((el, index) => {
-        criticalElements.forEach(critical => {
-          if (this.elementsOverlap(el, critical)) {
-            violations.push({
-              element: `element_${index}`,
-              overlaps: critical.name,
-            });
+        critical.forEach((c) => {
+          if (this.overlap(el, c)) {
+            violations.push({ element: `element_${index}`, overlaps: c.name });
           }
         });
       });
@@ -211,8 +183,8 @@ export class NoOverlayRule extends ComplianceRule {
     if (violations.length > 0) {
       return {
         passed: false,
-        message: 'Elements are overlapping critical components (value tile/CTA/tag)',
-        suggestion: 'Move elements to avoid overlapping value tiles, CTAs, and tags',
+        message: 'Elements overlap critical components',
+        suggestion: 'Move elements to avoid overlap with CTA, value tile, or tag',
         affectedElements: violations,
       };
     }
@@ -220,91 +192,67 @@ export class NoOverlayRule extends ComplianceRule {
     return { passed: true };
   }
 
-  elementsOverlap(el1, el2) {
-    if (!el1.left || !el1.top || !el2.left || !el2.top) {
-      return false;
-    }
+  overlap(a, b) {
+    if (!a.left || !a.top || !b.left || !b.top) return false;
 
-    const rect1 = {
-      left: el1.left,
-      top: el1.top,
-      right: el1.left + (el1.width || 0),
-      bottom: el1.top + (el1.height || 0),
+    const r1 = {
+      left: a.left,
+      top: a.top,
+      right: a.left + (a.width || 0),
+      bottom: a.top + (a.height || 0),
     };
 
-    const rect2 = {
-      left: el2.x || el2.left,
-      top: el2.y || el2.top,
-      right: (el2.x || el2.left) + (el2.width || 0),
-      bottom: (el2.y || el2.top) + (el2.height || 0),
+    const r2 = {
+      left: b.x || b.left,
+      top: b.y || b.top,
+      right: (b.x || b.left) + (b.width || 0),
+      bottom: (b.y || b.top) + (b.height || 0),
     };
 
     return !(
-      rect1.right < rect2.left ||
-      rect1.left > rect2.right ||
-      rect1.bottom < rect2.top ||
-      rect1.top > rect2.bottom
+      r1.right < r2.left ||
+      r1.left > r2.right ||
+      r1.bottom < r2.top ||
+      r1.top > r2.bottom
     );
   }
 }
 
 /**
- * Rule 13: Drinkaware for Alcohol
+ * Rule 13: Drinkaware
  */
 export class DrinkAwareRule extends ComplianceRule {
   constructor() {
-    super('drinkaware', 'Drinkaware Logo Required', 'design', 'hard_fail');
+    super('drinkaware', 'Drinkaware Required', 'design', 'hard_fail');
   }
 
   validate(creativeData) {
-    if (creativeData.category !== 'alcohol' && !creativeData.isAlcohol) {
-      return { passed: true };
-    }
+    if (!creativeData.isAlcohol && creativeData.category !== 'alcohol') return { passed: true };
 
-    if (!creativeData.drinkaware) {
+    const dw = creativeData.drinkaware;
+    if (!dw) {
       return {
         passed: false,
-        message: 'Alcohol products must include Drinkaware logo',
-        suggestion: 'Add Drinkaware lock-up (minimum 20px height, black or white only)',
+        message: 'Drinkaware logo required for alcohol products',
+        suggestion: 'Add Drinkaware lock-up (min 20px height)',
       };
     }
 
-    const dw = creativeData.drinkaware;
-    
-    let minHeight = 20;
-    if (creativeData.format === 'says') {
-      minHeight = 12;
-    }
-
+    let minHeight = creativeData.format === 'says' ? 12 : 20;
     if (dw.height < minHeight) {
       return {
         passed: false,
-        message: `Drinkaware logo too small (${dw.height}px, minimum ${minHeight}px)`,
-        suggestion: `Increase Drinkaware logo to at least ${minHeight}px height`,
+        message: `Drinkaware logo too small (${dw.height}px)`,
+        suggestion: `Increase to at least ${minHeight}px`,
       };
     }
 
     if (dw.color && dw.color !== '#000000' && dw.color !== '#ffffff') {
       return {
         passed: false,
-        message: 'Drinkaware logo must be all-black or all-white',
-        suggestion: 'Change Drinkaware logo color to #000000 or #ffffff',
+        message: 'Drinkaware logo must be black or white',
+        suggestion: 'Change logo color to #000000 or #ffffff',
       };
-    }
-
-    if (creativeData.backgroundColor && dw.color) {
-      const contrast = new WCAGContrastRule().calculateContrast(
-        creativeData.backgroundColor,
-        dw.color
-      );
-
-      if (contrast < 3.0) {
-        return {
-          passed: false,
-          message: 'Drinkaware logo has insufficient contrast with background',
-          suggestion: 'Switch Drinkaware color to improve visibility',
-        };
-      }
     }
 
     return { passed: true };
@@ -316,36 +264,27 @@ export class DrinkAwareRule extends ComplianceRule {
  */
 export class BackgroundColorRule extends ComplianceRule {
   constructor() {
-    super('background_color', 'Background Color', 'design', 'warning');
+    super('background_color', 'Background Color Warning', 'design', 'warning');
   }
 
   validate(creativeData) {
-    if (!creativeData.backgroundColor) {
-      return { passed: true };
-    }
+    if (!creativeData.backgroundColor) return { passed: true };
 
-    const bgColor = creativeData.backgroundColor.toLowerCase();
+    const bg = creativeData.backgroundColor.toLowerCase();
+    const brightness = this.getBrightness(bg);
 
-    const isDark = this.getColorBrightness(bgColor) < 50;
-
-    const isTooLight = this.getColorBrightness(bgColor) > 250;
-
-    if (isDark) {
+    if (brightness < 50) {
       return {
         passed: false,
-        message: 'Very dark backgrounds may reduce readability',
-        suggestion: 'Consider using a lighter background color',
+        message: 'Background too dark',
+        suggestion: 'Consider using a lighter background',
       };
-    }
-
-    if (isTooLight && bgColor === '#ffffff') {
-      return { passed: true };
     }
 
     return { passed: true };
   }
 
-  getColorBrightness(hex) {
+  getBrightness(hex) {
     const rgb = parseInt(hex.slice(1), 16);
     const r = (rgb >> 16) & 0xff;
     const g = (rgb >> 8) & 0xff;
@@ -353,3 +292,214 @@ export class BackgroundColorRule extends ComplianceRule {
     return (r * 299 + g * 587 + b * 114) / 1000;
   }
 }
+
+/**
+ * NEW RULE: CTA Size Requirements
+ */
+export class CTASizeRule extends ComplianceRule {
+  constructor() {
+    super('cta_size', 'CTA Size Requirements', 'design', 'hard_fail');
+  }
+
+  validate(creativeData) {
+    if (!creativeData.cta) return { passed: true };
+
+    const cta = creativeData.cta;
+
+    const minSizes = {
+      instagram_post: { width: 200, height: 48 },
+      instagram_story: { width: 280, height: 56 },
+      facebook_feed: { width: 200, height: 48 },
+      instore_display: { width: 300, height: 80 },
+    };
+
+    const required = minSizes[creativeData.format] || { width: 200, height: 48 };
+    const violations = [];
+
+    if (cta.width < required.width) {
+      violations.push({ issue: 'width', current: cta.width, minimum: required.width });
+    }
+
+    if (cta.height < required.height) {
+      violations.push({ issue: 'height', current: cta.height, minimum: required.height });
+    }
+
+    if (violations.length > 0) {
+      return {
+        passed: false,
+        message: 'CTA too small',
+        suggestion: `CTA must be at least ${required.width}x${required.height}px`,
+        affectedElements: violations,
+      };
+    }
+
+    return { passed: true };
+  }
+}
+
+/**
+ * NEW RULE: Tag Size & Position
+ */
+export class TagSizePositionRule extends ComplianceRule {
+  constructor() {
+    super('tag_size_position', 'Tag Size & Position', 'design', 'hard_fail');
+  }
+
+  validate(creativeData) {
+    if (!creativeData.tag) return { passed: true };
+
+    const tag = creativeData.tag;
+    const violations = [];
+
+    const MIN_FONT = 12;
+
+    if (tag.fontSize && tag.fontSize < MIN_FONT) {
+      violations.push({
+        issue: 'fontSize',
+        current: tag.fontSize,
+        minimum: MIN_FONT,
+      });
+    }
+
+    const canvasHeight = creativeData.canvasHeight || 1080;
+    const expectedBottom = canvasHeight - 60;
+
+    if (tag.y != null && tag.y < expectedBottom) {
+      violations.push({
+        issue: 'position',
+        current: tag.y,
+        expected: expectedBottom,
+      });
+    }
+
+    if (violations.length > 0) {
+      return {
+        passed: false,
+        message: 'Tag size/position incorrect',
+        suggestion: `Tag must be ≥ ${MIN_FONT}px and near bottom`,
+        affectedElements: violations,
+      };
+    }
+
+    return { passed: true };
+  }
+}
+
+/**
+ * NEW RULE: Value Tile Font Size
+ */
+export class ValueTileFontSizeRule extends ComplianceRule {
+  constructor() {
+    super('value_tile_font_size', 'Value Tile Font Size', 'design', 'hard_fail');
+  }
+
+  validate(creativeData) {
+    if (!creativeData.valueTile) return { passed: true };
+
+    const vt = creativeData.valueTile;
+
+    const sizes = {
+      new: { title: 24, price: 0 },
+      white: { title: 16, price: 36 },
+      clubcard: { title: 14, price: 32 },
+    };
+
+    const expected = sizes[vt.type];
+    if (!expected) return { passed: true };
+
+    const violations = [];
+
+    if (vt.titleFontSize && vt.titleFontSize !== expected.title) {
+      violations.push({ element: 'title', current: vt.titleFontSize, expected: expected.title });
+    }
+
+    if (expected.price > 0 && vt.priceFontSize && vt.priceFontSize !== expected.price) {
+      violations.push({ element: 'price', current: vt.priceFontSize, expected: expected.price });
+    }
+
+    if (violations.length > 0) {
+      return {
+        passed: false,
+        message: 'Incorrect value tile font size',
+        suggestion: 'Value tiles must use predefined font sizes',
+        affectedElements: violations,
+      };
+    }
+
+    return { passed: true };
+  }
+}
+
+/**
+ * NEW RULE: LEP Design Requirements
+ */
+export class LEPDesignRule extends ComplianceRule {
+  constructor() {
+    super('lep_design', 'LEP Design Requirements', 'design', 'hard_fail');
+  }
+
+  validate(creativeData) {
+    if (!creativeData.isLEP && !creativeData.valueTile?.type?.includes('lep')) {
+      return { passed: true };
+    }
+
+    const violations = [];
+
+    if (creativeData.backgroundColor !== '#ffffff' && creativeData.backgroundColor !== 'white') {
+      violations.push({
+        issue: 'backgroundColor',
+        current: creativeData.backgroundColor,
+        required: '#ffffff',
+      });
+    }
+
+    const TESCO_BLUE = '#00539F';
+
+    (creativeData.elements || [])
+      .filter((el) => el.type === 'text' || el.type === 'i-text')
+      .forEach((el, index) => {
+        if (el.fill?.toLowerCase() !== TESCO_BLUE.toLowerCase()) {
+          violations.push({
+            element: `text_${index}`,
+            issue: 'textColor',
+            current: el.fill,
+            required: TESCO_BLUE,
+          });
+        }
+      });
+
+    if (creativeData.valueTile && creativeData.valueTile.type !== 'white') {
+      violations.push({
+        issue: 'valueTile',
+        current: creativeData.valueTile.type,
+        required: 'white',
+      });
+    }
+
+    if (violations.length > 0) {
+      return {
+        passed: false,
+        message: 'LEP design requirements not met',
+        suggestion:
+          'LEP must use: white background, Tesco Blue text, white value tile, left-aligned copy',
+        affectedElements: violations,
+      };
+    }
+
+    return { passed: true };
+  }
+}
+
+// FINAL EXPORT
+export {
+  MinimumFontSizeRule,
+  WCAGContrastRule,
+  ValueTilePositionRule,
+  NoOverlayRule,
+  DrinkAwareRule,
+  BackgroundColorRule,
+  CTASizeRule,
+  TagSizePositionRule,
+  ValueTileFontSizeRule,
+  LEPDesignRule
+};
