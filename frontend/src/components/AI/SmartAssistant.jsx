@@ -1,6 +1,6 @@
-// frontend/src/components/AI/SmartAssistant.jsx - COMPLETE REWRITE
+// frontend/src/components/AI/SmartAssistant.jsx - COMPLETE AUTO-AD GENERATION
 import { useState, useEffect } from 'react';
-import { Sparkles, Loader, MessageSquare, Lightbulb, CheckCircle, AlertCircle, Info, Wand2, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Loader, CheckCircle, AlertCircle, Info, Wand2, Image as ImageIcon, Zap } from 'lucide-react';
 import useOrchestrator from '../../hooks/useOrchestrator';
 import useAIStore from '../../store/aiStore';
 import useCanvasStore from '../../store/canvasStore';
@@ -23,6 +23,7 @@ function SmartAssistant() {
   const [localInput, setLocalInput] = useState(assistantInput);
   const [isGeneratingAd, setIsGeneratingAd] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(null);
+  const [autoMode, setAutoMode] = useState(false); // NEW: Auto-detect uploaded images
 
   const handleInputChange = (e) => {
     const val = e.target.value;
@@ -38,6 +39,33 @@ function SmartAssistant() {
     'Create a vibrant ad for snacks',
     'Generate an elegant beauty product ad',
   ];
+
+  // NEW: Auto-detect when user uploads an image
+  useEffect(() => {
+    if (!canvas || !autoMode) return;
+
+    const handleImageAdded = (e) => {
+      const obj = e.target;
+      if (obj.type === 'image') {
+        console.log('📸 Image detected! Auto-triggering ad generation...');
+        
+        // Extract product info from canvas
+        const productInfo = extractProductInfo();
+        if (productInfo.hasImage) {
+          // Auto-generate ad after a short delay
+          setTimeout(() => {
+            generateCompleteAd(true); // Pass true to indicate auto-mode
+          }, 1000);
+        }
+      }
+    };
+
+    canvas.on('object:added', handleImageAdded);
+
+    return () => {
+      canvas.off('object:added', handleImageAdded);
+    };
+  }, [canvas, autoMode]);
 
   const getAllImagesFromCanvas = () => {
     if (!canvas) return [];
@@ -100,8 +128,8 @@ function SmartAssistant() {
     return 'modern';
   };
 
-  const generateCompleteAd = async () => {
-    if (!localInput.trim()) {
+  const generateCompleteAd = async (isAutoMode = false) => {
+    if (!isAutoMode && !localInput.trim()) {
       toast.error('Please describe the ad you want to create');
       return;
     }
@@ -121,15 +149,72 @@ function SmartAssistant() {
     setGenerationProgress({ step: 'Starting', progress: 0 });
 
     try {
-      const category = detectCategory(localInput);
-      const style = detectStyle(localInput);
+      const category = detectCategory(localInput || 'general product');
+      const style = detectStyle(localInput || 'modern');
 
-      // Step 1: Generate Background (20%)
-      setGenerationProgress({ step: 'Generating background...', progress: 20 });
-      const backgroundPrompt = `${style} background for ${category} product advertisement`;
+      const results = {
+        background: null,
+        layout: null,
+        copy: null,
+        processingSteps: []
+      };
+
+      // Step 1: Remove Background (20%)
+      setGenerationProgress({ step: 'Removing background...', progress: 20 });
       
-      let backgroundUrl = null;
+      let cleanProductImage = productImage;
       try {
+        const images = canvas.getObjects('image');
+        if (images.length > 0) {
+          const mainImage = images[0]; // Get the uploaded image
+          
+          // Fetch the image as blob
+          const response = await fetch(mainImage.getSrc());
+          const blob = await response.blob();
+          
+          const formData = new FormData();
+          formData.append('file', blob, 'product.jpg');
+          formData.append('method', 'fast');
+
+          const bgRemovalResponse = await fetch('http://localhost:8000/process/remove-background', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const bgData = await bgRemovalResponse.json();
+          
+          if (bgData.success) {
+            cleanProductImage = `http://localhost:8000${bgData.download_url}`;
+            
+            // Replace the image on canvas with background-removed version
+            fabric.Image.fromURL(cleanProductImage, (newImg) => {
+              newImg.set({
+                left: mainImage.left,
+                top: mainImage.top,
+                scaleX: mainImage.scaleX,
+                scaleY: mainImage.scaleY,
+                angle: mainImage.angle,
+              });
+              canvas.remove(mainImage);
+              canvas.add(newImg);
+              canvas.renderAll();
+            }, { crossOrigin: 'anonymous' });
+
+            results.processingSteps.push({ step: 'background_removal', success: true });
+          }
+        }
+      } catch (bgError) {
+        console.warn('Background removal skipped:', bgError);
+        results.processingSteps.push({ step: 'background_removal', success: false });
+      }
+
+      // Step 2: Generate Background (40%)
+      setGenerationProgress({ step: 'Generating background...', progress: 40 });
+      let backgroundUrl = null;
+      
+      try {
+        const backgroundPrompt = `${style} background for ${category} product advertisement, professional, high quality`;
+        
         const bgResponse = await fetch('http://localhost:3000/api/image/generate-background', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -146,13 +231,20 @@ function SmartAssistant() {
           backgroundUrl = bgData.data.download_url.startsWith('http') 
             ? bgData.data.download_url 
             : `http://localhost:8000${bgData.data.download_url}`;
+          
+          results.background = {
+            url: backgroundUrl,
+            metadata: bgData.data.metadata
+          };
+          results.processingSteps.push({ step: 'background', success: true });
         }
       } catch (bgError) {
-        console.warn('Background generation skipped:', bgError);
+        console.warn('Background generation failed:', bgError);
+        results.processingSteps.push({ step: 'background', success: false });
       }
 
-      // Step 2: Generate Layout (40%)
-      setGenerationProgress({ step: 'Suggesting optimal layouts...', progress: 40 });
+      // Step 3: Generate Layout (60%)
+      setGenerationProgress({ step: 'Suggesting optimal layouts...', progress: 60 });
       let layoutData = null;
       
       try {
@@ -160,7 +252,7 @@ function SmartAssistant() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            productImageUrl: productImage,
+            productImageUrl: cleanProductImage,
             category: category,
             style: style
           })
@@ -170,13 +262,16 @@ function SmartAssistant() {
         if (layoutResult.success) {
           layoutData = layoutResult.data.suggestions.layouts;
           setGeneratedLayouts(layoutData);
+          results.layout = layoutData;
+          results.processingSteps.push({ step: 'layout', success: true });
         }
       } catch (layoutError) {
         console.warn('Layout generation skipped:', layoutError);
+        results.processingSteps.push({ step: 'layout', success: false });
       }
 
-      // Step 3: Generate Copy (60%)
-      setGenerationProgress({ step: 'Writing compelling copy...', progress: 60 });
+      // Step 4: Generate Copy (80%)
+      setGenerationProgress({ step: 'Writing compelling copy...', progress: 80 });
       let copyData = null;
       
       try {
@@ -198,22 +293,17 @@ function SmartAssistant() {
         if (copyResult.success) {
           copyData = copyResult.data.suggestions;
           setGeneratedCopy(copyData);
+          results.copy = copyData;
+          results.processingSteps.push({ step: 'copy', success: true });
         }
       } catch (copyError) {
         console.warn('Copy generation skipped:', copyError);
+        results.processingSteps.push({ step: 'copy', success: false });
       }
 
-      // Step 4: Apply to Canvas (80%)
-      setGenerationProgress({ step: 'Composing your ad...', progress: 80 });
+      // Step 5: Compose on Canvas (90%)
+      setGenerationProgress({ step: 'Composing your ad...', progress: 90 });
       
-      // Clear canvas first
-      const existingObjects = canvas.getObjects();
-      existingObjects.forEach(obj => {
-        if (!obj.isProductImage) {
-          canvas.remove(obj);
-        }
-      });
-
       // Apply background
       if (backgroundUrl) {
         fabric.Image.fromURL(backgroundUrl, (img) => {
@@ -235,14 +325,13 @@ function SmartAssistant() {
         }, { crossOrigin: 'anonymous' });
       }
 
-      // Apply layout to existing product image
-      if (layoutData && layoutData.length > 0 && productImage) {
-        const layout = layoutData[0]; // Use first layout
+      // Apply layout to product image
+      if (layoutData && layoutData.length > 0 && cleanProductImage) {
+        const layout = layoutData[0];
         const elements = layout.elements;
 
-        // Find and reposition product image
         const productImg = canvas.getObjects('image').find(img => 
-          img.getSrc() === productImage
+          img.getSrc() === cleanProductImage || img.getSrc() === productImage
         );
 
         if (productImg && elements.product) {
@@ -253,7 +342,6 @@ function SmartAssistant() {
             originY: 'center',
             scaleX: elements.product.width / productImg.width,
             scaleY: elements.product.height / productImg.height,
-            isProductImage: true
           });
           productImg.setCoords();
         }
@@ -261,7 +349,7 @@ function SmartAssistant() {
 
       // Add copy text
       if (copyData && copyData.length > 0) {
-        const copy = copyData[0]; // Use first copy variant
+        const copy = copyData[0];
 
         // Add headline
         const headline = new fabric.IText(copy.headline, {
@@ -291,44 +379,46 @@ function SmartAssistant() {
 
       canvas.renderAll();
 
-      // Step 5: Complete (100%)
+      // Step 6: Complete (100%)
       setGenerationProgress({ step: 'Complete!', progress: 100 });
 
       // Compile results
-      const results = {
-        success: true,
-        background: backgroundUrl ? { url: backgroundUrl } : null,
-        layout: layoutData,
-        copy: copyData,
-        recommendations: [
-          {
-            type: 'success',
-            message: `✨ Complete ${category} ad generated successfully!`
-          },
-          ...(backgroundUrl ? [{
-            type: 'success',
-            message: '🎨 Custom background applied'
-          }] : []),
-          ...(layoutData ? [{
-            type: 'success',
-            message: `📐 ${layoutData.length} layout option(s) available`
-          }] : []),
-          ...(copyData ? [{
-            type: 'success',
-            message: `✍️ ${copyData.length} copy variation(s) ready`
-          }] : []),
-          {
-            type: 'info',
-            message: '💡 Check Layouts, Copy, and Colors tabs for variations'
-          }
-        ]
-      };
+      const successfulSteps = results.processingSteps.filter(s => s.success).length;
+      
+      results.recommendations = [
+        {
+          type: 'success',
+          message: `✨ Complete ${category} ad generated successfully!`
+        },
+        {
+          type: 'success',
+          message: `🎨 ${successfulSteps}/${results.processingSteps.length} AI steps completed`
+        },
+        ...(backgroundUrl ? [{
+          type: 'success',
+          message: '🖼️ Custom background applied'
+        }] : []),
+        ...(layoutData ? [{
+          type: 'success',
+          message: `📐 ${layoutData.length} layout option(s) available in Layouts tab`
+        }] : []),
+        ...(copyData ? [{
+          type: 'success',
+          message: `✍️ ${copyData.length} copy variation(s) ready in Copy tab`
+        }] : []),
+        {
+          type: 'info',
+          message: '💡 Explore variations in Layouts, Copy, and Colors tabs'
+        }
+      ];
 
       setAssistantResults(results);
       toast.success('🎉 Your ad is ready!', { duration: 4000 });
 
-      setLocalInput('');
-      setAssistantInput('');
+      if (!isAutoMode) {
+        setLocalInput('');
+        setAssistantInput('');
+      }
 
     } catch (error) {
       console.error('❌ Complete ad generation failed:', error);
@@ -369,6 +459,39 @@ function SmartAssistant() {
         <p style={{ fontSize: '13px', color: '#6b7280' }}>
           Complete ad generation: Background + Layout + Copy
         </p>
+      </div>
+
+      {/* Auto Mode Toggle */}
+      <div style={{ 
+        padding: '12px', 
+        backgroundColor: autoMode ? '#f0fdf4' : '#f3f4f6', 
+        borderRadius: '8px',
+        border: `2px solid ${autoMode ? '#22c55e' : '#e5e7eb'}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Zap size={16} color={autoMode ? '#22c55e' : '#6b7280'} />
+          <span style={{ fontSize: '13px', fontWeight: '500', color: '#1f2937' }}>
+            Auto-Generate on Upload
+          </span>
+        </div>
+        <button
+          onClick={() => setAutoMode(!autoMode)}
+          style={{
+            padding: '6px 12px',
+            backgroundColor: autoMode ? '#22c55e' : '#9ca3af',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '12px',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          {autoMode ? 'ON' : 'OFF'}
+        </button>
       </div>
 
       {/* Input Form */}
@@ -517,11 +640,10 @@ function SmartAssistant() {
             gap: '8px',
             color: '#1f2937'
           }}>
-            <Lightbulb size={16} color="#8b5cf6" />
+            <Sparkles size={16} color="#8b5cf6" />
             Generation Results
           </h4>
 
-          {/* Recommendations */}
           {assistantResults.recommendations && assistantResults.recommendations.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
               {assistantResults.recommendations.map((rec, index) => {
@@ -607,15 +729,25 @@ function SmartAssistant() {
             <div>
               <strong>How it works:</strong>
               <ol style={{ marginTop: '4px', paddingLeft: '16px' }}>
-                <li>Upload your product image first</li>
-                <li>Describe the ad you want</li>
-                <li>AI generates background, layout & copy</li>
-                <li>Everything appears on your canvas!</li>
+                <li>Upload your product image</li>
+                <li>Toggle "Auto-Generate" ON for instant ad creation</li>
+                <li>Or describe the ad you want and click generate</li>
+                <li>AI removes background, generates bg, layout & copy</li>
+                <li>Everything appears on your canvas automatically!</li>
               </ol>
             </div>
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

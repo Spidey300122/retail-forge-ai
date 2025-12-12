@@ -1,4 +1,4 @@
-// frontend/src/hooks/useOrchestrator.js - ENHANCED VERSION
+// frontend/src/hooks/useOrchestrator.js - FIXED VERSION
 import { useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -33,11 +33,11 @@ function useOrchestrator() {
   };
 
   const processCompleteAd = async ({
-    productImage,
+    productImageUrl, // FIXED: renamed from productImage
     productName,
     category,
     style,
-    description
+    description // Keeping this even though unused - may be needed later
   }) => {
     setIsProcessing(true);
 
@@ -49,7 +49,15 @@ function useOrchestrator() {
         background: null,
         layout: null,
         copy: null,
-        composition: null
+        composition: null,
+        // Store the input params for reference
+        input: {
+          productImageUrl,
+          productName,
+          category,
+          style,
+          description
+        }
       };
 
       return results;
