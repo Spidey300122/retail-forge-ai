@@ -12,7 +12,8 @@ import colorRoutes from './api/routes/color.js';
 import orchestratorRoutes from './api/routes/orchestrator.js';
 import validateRoutes from './api/routes/validate.js';
 import exportRoutes from './api/routes/export.js'; // <-- Added Day 15
-
+import completeAdRoutes from './api/routes/completeAd.js';
+// 
 dotenv.config();
 
 const app = express();
@@ -27,7 +28,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-
+app.use('/api/complete-ad', completeAdRoutes);
 // Security: Rate Limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

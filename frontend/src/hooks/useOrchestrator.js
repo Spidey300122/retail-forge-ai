@@ -1,3 +1,4 @@
+// frontend/src/hooks/useOrchestrator.js - ENHANCED VERSION
 import { useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -25,6 +26,35 @@ function useOrchestrator() {
     } catch (error) {
       console.error('Orchestrator error:', error);
       toast.error('Failed to process request', { id: loadingToast });
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const processCompleteAd = async ({
+    productImage,
+    productName,
+    category,
+    style,
+    description
+  }) => {
+    setIsProcessing(true);
+
+    try {
+      // This is a client-side orchestration since we want real-time progress
+      // The individual AI calls are made from the SmartAssistant component
+      
+      const results = {
+        background: null,
+        layout: null,
+        copy: null,
+        composition: null
+      };
+
+      return results;
+    } catch (error) {
+      console.error('Complete ad generation error:', error);
       throw error;
     } finally {
       setIsProcessing(false);
@@ -69,6 +99,7 @@ function useOrchestrator() {
 
   return {
     processRequest,
+    processCompleteAd,
     suggestImprovements,
     generateComplete,
     isProcessing,
