@@ -1,4 +1,6 @@
-// frontend/src/components/AI/SmartAssistant.jsx - COMPLETE WITH NO LINTING ERRORS
+// frontend/src/components/AI/SmartAssistant.jsx - v4 ULTIMATE
+// FIXES: Editable text, product-matching backgrounds, context-aware copy, smart analysis
+
 import { useState, useEffect } from 'react';
 import { Sparkles, Loader, CheckCircle, AlertCircle, Info, Wand2, Image as ImageIcon, Zap, Tag } from 'lucide-react';
 import useAIStore from '../../store/aiStore';
@@ -28,21 +30,119 @@ function SmartAssistant() {
   };
 
   const examplePrompts = [
-    'Generate a complete ad for this mobile phone',
-    'Create an LEP ad for this product',
-    'Create a beverage ad campaign',
-    'Make a professional product advertisement',
-    'Design a modern ad for electronics',
-    'Create an LEP creative for these potatoes',
+    'Create a kettle advertisement',
+    'My brand is Asian Paints, Rs 3000 paint ad',
+    'Professional soap ad with logo',
+    'Cricket bat Rs 1500 sports ad',
   ];
 
-  // Detect if user is requesting LEP
-  const detectLEP = (prompt) => {
-    const lepKeywords = /\blep\b|low everyday price|everyday low price/i;
-    return lepKeywords.test(prompt);
+  // Extract brand name
+  const extractBrandName = (prompt) => {
+    let match = prompt.match(/my brand(?:\s+name)?\s+is\s+["']([^"']+)["']/i);
+    if (match) return match[1];
+    
+    match = prompt.match(/brand(?:\s+name)?:\s*([A-Z][a-zA-Z\s&]+?)(?:\s*,|\s*and|\s*here|$)/i);
+    if (match) return match[1].trim();
+    
+    match = prompt.match(/["']([A-Z][a-zA-Z\s&]+?)["']/);
+    if (match) return match[1];
+    
+    return null;
   };
 
-  // Get all images from canvas
+  // ENHANCED: Better category detection
+  const detectCategory = (prompt) => {
+    const categories = {
+      kettle: /kettle|electric kettle|tea kettle|water boiler/i,
+      paint: /paint|color|coating|asian paints|berger|nerolac/i,
+      soap: /soap|bathing|hygiene|lux|dove|lifebuoy/i,
+      sports: /cricket|bat|ball|sports|athletic|game|fitness/i,
+      beverages: /drink|juice|soda|beverage|water|coffee|tea|cola/i,
+      food: /food|snack|meal|bread|cheese|burger|pizza/i,
+      beauty: /beauty|makeup|cosmetic|skincare|lotion/i,
+      electronics: /electronic|phone|laptop|tech|gadget|mobile|appliance/i,
+      fashion: /fashion|clothing|apparel|shirt|dress/i,
+      home: /home|kitchen|appliance|furniture|decor/i,
+    };
+
+    for (const [category, regex] of Object.entries(categories)) {
+      if (regex.test(prompt)) {
+        console.log(`✅ Category: ${category}`);
+        return category;
+      }
+    }
+
+    return 'general';
+  };
+
+  // Extract price
+  const extractPrice = (prompt) => {
+    const patterns = [
+      /(?:Rs|₹)\s*(\d+(?:,\d+)*)/i,
+      /(\d+(?:,\d+)*)\s*(?:Rs|rupees)/i,
+      /price\s*(?:is|:)?\s*(?:Rs|₹)?\s*(\d+(?:,\d+)*)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = prompt.match(pattern);
+      if (match) return `Rs ${match[1]}`;
+    }
+    return null;
+  };
+
+  // SMART: Extract product name
+  const extractProductName = (prompt, category) => {
+    const patterns = [
+      /(?:ad|advertisement)\s+for\s+(?:my|this|the|a|an)?\s*([a-z\s]+?)(?:\s+which|\s+that|\s+costs|\s+with|,|$)/i,
+      /create.*?(?:for|of)\s+(?:my|this|the|a|an)?\s*([a-z\s]+?)(?:\s+which|\s+that|\s+costs|\s+with|,|$)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = prompt.match(pattern);
+      if (match && match[1]) {
+        const name = match[1].trim();
+        if (name.length > 2 && name.length < 30) {
+          return name.charAt(0).toUpperCase() + name.slice(1);
+        }
+      }
+    }
+
+    // Category-based intelligent defaults
+    const categoryDefaults = {
+      kettle: 'Electric Kettle',
+      paint: 'Premium Paint',
+      soap: 'Luxury Soap',
+      sports: 'Cricket Bat',
+      beverages: 'Refreshing Drink',
+      food: 'Delicious Meal',
+      beauty: 'Beauty Product',
+      electronics: 'Smart Device',
+      fashion: 'Fashion Item',
+      home: 'Home Essential',
+      general: 'Premium Product'
+    };
+
+    return categoryDefaults[category] || 'Premium Product';
+  };
+
+  // Find logo on canvas
+  const findLogoOnCanvas = () => {
+    if (!canvas) return null;
+    
+    const images = canvas.getObjects('image');
+    const sortedBySize = images.sort((a, b) => (a.width * a.height) - (b.width * b.height));
+    
+    if (sortedBySize.length > 1) {
+      const smallest = sortedBySize[0];
+      if (smallest.width * smallest.height < 50000) {
+        console.log('✅ Logo detected');
+        return smallest;
+      }
+    }
+    
+    return null;
+  };
+
   const getAllImagesFromCanvas = () => {
     if (!canvas) return [];
     const images = canvas.getObjects('image');
@@ -55,7 +155,6 @@ function SmartAssistant() {
     }));
   };
 
-  // Get best image for layout
   const getBestImageForLayout = () => {
     const images = getAllImagesFromCanvas();
     if (images.length === 0) return null;
@@ -63,202 +162,407 @@ function SmartAssistant() {
     return images[0];
   };
 
-  // Extract product info from canvas
-  const extractProductInfo = () => {
-    const textObjects = canvas?.getObjects().filter(obj => 
-      obj.type === 'i-text' || obj.type === 'text'
-    ) || [];
+  // FIXED: Make text EDITABLE
+  const addEditableText = (text, options = {}) => {
+    if (!canvas || !text) return;
     
-    const productName = textObjects[0]?.text || 'Product';
-    return {
-      name: productName,
-      hasImage: getAllImagesFromCanvas().length > 0
-    };
-  };
-
-  // Detect category from prompt
-  const detectCategory = (prompt) => {
-    const categories = {
-      beverages: /drink|juice|soda|beverage|water|coffee|tea|beer|wine|alcohol/i,
-      food: /food|snack|meal|bread|cheese|potato|vegetable/i,
-      beauty: /beauty|makeup|cosmetic|skincare/i,
-      electronics: /electronic|phone|laptop|tech|gadget|mobile/i,
-      fashion: /fashion|clothing|apparel|shirt|dress/i,
-    };
-
-    for (const [category, regex] of Object.entries(categories)) {
-      if (regex.test(prompt)) return category;
-    }
-    return 'general';
-  };
-
-  // Detect style from prompt
-  const detectStyle = (prompt) => {
-    const styles = {
-      modern: /modern|contemporary|sleek/i,
-      minimal: /minimal|simple|clean/i,
-      vibrant: /vibrant|colorful|bold/i,
-      elegant: /elegant|sophisticated|premium/i,
-      playful: /playful|fun|casual/i,
-      professional: /professional|corporate|business/i,
+    const defaultOptions = {
+      fontSize: 36,
+      fill: '#ffffff',
+      fontWeight: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      left: canvas.width / 2,
+      top: canvas.height / 2,
+      originX: 'center',
+      originY: 'center',
+      // CRITICAL: Make text editable!
+      selectable: true,
+      editable: true,
+      hasControls: true,
+      hasBorders: true,
+      shadow: new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.8)',
+        blur: 10,
+        offsetX: 2,
+        offsetY: 2
+      }),
+      ...options
     };
 
-    for (const [style, regex] of Object.entries(styles)) {
-      if (regex.test(prompt)) return style;
-    }
-    return 'modern';
-  };
-
-  // Generate LEP Creative matching reference image
-  const generateLEPCreative = (productImageData) => {
-    console.log('🏷️ Generating LEP creative...');
+    // Use IText for editable text
+    const textObject = new fabric.IText(text, defaultOptions);
+    canvas.add(textObject);
+    canvas.renderAll();
     
+    return textObject;
+  };
+
+  // SMART: Category-specific background generation
+  const generateSmartBackground = async (category, productName) => {
+    const backgroundPrompts = {
+      kettle: 'modern kitchen background, bright and clean, morning coffee vibes, professional product photography, warm lighting',
+      paint: 'colorful paint splashes, artistic brush strokes, vibrant gradient, creative design, professional lighting',
+      soap: 'clean spa background, water bubbles and foam, fresh mint leaves, soft pastel colors, serene atmosphere',
+      sports: 'dynamic sports stadium, energetic crowd, bright lights, action-packed scene, athletic energy',
+      beverages: 'refreshing background with water droplets, ice cubes, citrus fruits, cool summer vibes',
+      food: 'appetizing food styling background, wooden table, natural ingredients, warm inviting atmosphere',
+      electronics: 'futuristic tech background, digital grid, neon lights, modern minimalist design',
+      home: 'cozy home interior, comfortable living space, warm lighting, inviting atmosphere',
+      general: 'professional product photography background, clean gradient, studio lighting'
+    };
+
+    const stylePresets = {
+      kettle: 'modern',
+      paint: 'vibrant',
+      soap: 'minimal',
+      sports: 'energetic',
+      beverages: 'fresh',
+      food: 'warm',
+      electronics: 'sleek',
+      home: 'cozy',
+      general: 'professional'
+    };
+
+    const prompt = backgroundPrompts[category] || backgroundPrompts.general;
+    const style = stylePresets[category] || stylePresets.general;
+
+    console.log(`🎨 Generating ${category}-specific background: "${prompt}"`);
+
+    try {
+      const response = await fetch('http://localhost:3000/api/image/generate-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt,
+          style: style,
+          width: 1080,
+          height: 1080
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        const url = data.data.download_url.startsWith('http') 
+          ? data.data.download_url 
+          : `http://localhost:8000${data.data.download_url}`;
+        
+        console.log('✅ Background generated:', url);
+        return url;
+      }
+    } catch (error) {
+      console.warn('Background generation failed:', error);
+    }
+
+    return null;
+  };
+
+  // SMART: Generate product-specific copy with Claude
+  const generateSmartCopy = async (productInfo) => {
+    console.log(`✍️ Generating copy for ${productInfo.name} (${productInfo.category})`);
+
+    // Category-specific features and audiences
+    const categoryInfo = {
+      kettle: {
+        features: ['Fast boiling', 'Energy efficient', 'Auto shut-off safety'],
+        audience: 'tea and coffee lovers, busy professionals'
+      },
+      paint: {
+        features: ['Vibrant colors', 'Long-lasting finish', 'Easy application'],
+        audience: 'homeowners, interior designers'
+      },
+      soap: {
+        features: ['Gentle formula', 'Long-lasting fragrance', 'Moisturizing'],
+        audience: 'beauty-conscious individuals, families'
+      },
+      sports: {
+        features: ['Professional grade', 'High performance', 'Durable'],
+        audience: 'athletes, sports enthusiasts'
+      },
+      general: {
+        features: ['Premium quality', 'Best value', 'Reliable'],
+        audience: 'discerning customers'
+      }
+    };
+
+    const info = categoryInfo[productInfo.category] || categoryInfo.general;
+
+    try {
+      const response = await fetch('http://localhost:3000/api/ai/generate-copy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productInfo: {
+            name: productInfo.brandName || productInfo.name,
+            category: productInfo.category,
+            features: info.features,
+            price: productInfo.price,
+            audience: info.audience
+          },
+          style: 'energetic'
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.data.suggestions && data.data.suggestions.length > 0) {
+        const copy = data.data.suggestions[0];
+        console.log('✅ Claude generated:', copy);
+        return {
+          headline: copy.headline,
+          tagline: copy.subhead
+        };
+      }
+    } catch (error) {
+      console.warn('Copy generation failed:', error);
+    }
+
+    // Fallback to category defaults
+    const fallbacks = {
+      kettle: { headline: 'Perfect Cup, Every Time', tagline: 'Fast boiling, energy efficient, safe' },
+      paint: { headline: 'Transform Your Space', tagline: 'Vibrant colors that last' },
+      soap: { headline: 'Pure Freshness Daily', tagline: 'Gentle care for your skin' },
+      sports: { headline: 'Unleash Your Potential', tagline: 'Performance meets quality' },
+      general: { headline: 'Premium Quality', tagline: 'Excellence you can trust' }
+    };
+
+    return fallbacks[productInfo.category] || fallbacks.general;
+  };
+
+  // CREATE SMART LAYOUT
+  const createSmartLayout = async (productImage, productInfo, backgroundUrl, logo) => {
     if (!canvas) return;
 
-    const TESCO_BLUE = '#00539F';
-    const WHITE = '#ffffff';
-
-    // Step 1: Set white background (enforced)
-    canvas.setBackgroundColor(WHITE, canvas.renderAll.bind(canvas));
+    console.log('🎨 Creating smart layout for:', productInfo);
     
-    // Step 2: Clear all existing objects
-    const allObjects = canvas.getObjects();
-    allObjects.forEach(obj => canvas.remove(obj));
+    // Clear text/shapes (keep images)
+    const objects = canvas.getObjects();
+    objects.forEach(obj => {
+      if (obj.type === 'text' || obj.type === 'i-text' || (obj.type === 'rect' && !obj.isBackground) || obj.type === 'circle') {
+        canvas.remove(obj);
+      }
+    });
 
-    // Step 3: Add product image (LEFT side, centered vertically)
-    if (productImageData && productImageData.object) {
-      fabric.Image.fromURL(productImageData.src, (img) => {
-        // Scale image to fit nicely on left side
-        const maxWidth = 400;
-        const maxHeight = 700;
-        const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
-        
+    // Step 1: Apply background
+    if (backgroundUrl) {
+      fabric.Image.fromURL(backgroundUrl, (img) => {
+        const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
         img.set({
-          left: 280,
-          top: canvas.height / 2,
-          originX: 'center',
-          originY: 'center',
+          left: 0,
+          top: 0,
           scaleX: scale,
           scaleY: scale,
           selectable: false,
-          evented: false
+          evented: false,
         });
         canvas.add(img);
+        canvas.sendToBack(img);
         canvas.renderAll();
       }, { crossOrigin: 'anonymous' });
+    } else {
+      // Fallback gradient
+      const gradients = {
+        kettle: [{ offset: 0, color: '#667eea' }, { offset: 1, color: '#764ba2' }],
+        paint: [{ offset: 0, color: '#f093fb' }, { offset: 1, color: '#f5576c' }],
+        soap: [{ offset: 0, color: '#4facfe' }, { offset: 1, color: '#00f2fe' }],
+        sports: [{ offset: 0, color: '#1e3a8a' }, { offset: 1, color: '#60a5fa' }],
+        default: [{ offset: 0, color: '#6366f1' }, { offset: 1, color: '#8b5cf6' }]
+      };
+
+      const gradient = gradients[productInfo.category] || gradients.default;
+      canvas.setBackgroundColor({
+        type: 'linear',
+        coords: { x1: 0, y1: 0, x2: canvas.width, y2: canvas.height },
+        colorStops: gradient
+      }, canvas.renderAll.bind(canvas));
     }
 
-    // Step 4: Add "Tesco" text (TOP LEFT, Tesco Blue)
-    const tescoText = new fabric.Text('Tesco', {
-      left: 120,
-      top: 200,
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Step 2: Position product (CENTER-RIGHT, large)
+    if (productImage) {
+      const img = productImage.object;
+      const targetWidth = canvas.width * 0.40;
+      const scale = targetWidth / img.width;
+      
+      img.set({
+        left: canvas.width * 0.65,
+        top: canvas.height / 2,
+        scaleX: scale,
+        scaleY: scale,
+        angle: 0,
+        originX: 'center',
+        originY: 'center',
+        selectable: true, // Allow repositioning
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.4)',
+          blur: 20,
+          offsetX: 10,
+          offsetY: 10
+        })
+      });
+      
+      canvas.bringToFront(img);
+    }
+
+    // Step 3: Add BRAND NAME or PRODUCT NAME (top-left, EDITABLE)
+    const mainHeadline = productInfo.brandName || productInfo.name;
+    addEditableText(mainHeadline.toUpperCase(), {
+      left: 80,
+      top: 100,
       originX: 'left',
       originY: 'top',
-      fontSize: 72,
+      fontSize: 68,
       fontWeight: 'bold',
-      fill: TESCO_BLUE,
-      fontFamily: 'Arial, Roboto, sans-serif',
-      selectable: false,
-      evented: false
-    });
-    canvas.add(tescoText);
-
-    // Step 5: Add WHITE Value Tile with LARGE price (RIGHT SIDE)
-    const valueTileRect = new fabric.Rect({
-      left: canvas.width - 250,
-      top: 220,
-      width: 200,
-      height: 160,
-      fill: WHITE,
-      stroke: '#d1d5db',
+      fill: '#ffffff',
+      fontFamily: 'Impact, Arial Black, sans-serif',
+      stroke: '#000000',
       strokeWidth: 2,
-      rx: 8,
-      ry: 8,
-      selectable: false,
-      evented: false
+      shadow: new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.7)',
+        blur: 15,
+        offsetX: 3,
+        offsetY: 3
+      })
     });
-    canvas.add(valueTileRect);
 
-    // Large price text
-    const priceText = new fabric.Text('£2', {
-      left: canvas.width - 150,
-      top: 280,
-      originX: 'center',
-      originY: 'center',
-      fontSize: 80,
-      fontWeight: 'bold',
-      fill: '#1f2937',
-      fontFamily: 'Arial, sans-serif',
-      selectable: false,
-      evented: false
-    });
-    canvas.add(priceText);
-
-    // Step 6: Add LEP Badge (TOP RIGHT, Tesco Blue background)
-    const lepBadge = new fabric.Rect({
-      left: canvas.width - 140,
-      top: 60,
-      width: 100,
-      height: 70,
-      fill: TESCO_BLUE,
-      rx: 6,
-      ry: 6,
-      selectable: false,
-      evented: false
-    });
-    canvas.add(lepBadge);
-
-    const lepText = new fabric.Text('LEP', {
-      left: canvas.width - 90,
-      top: 95,
-      originX: 'center',
-      originY: 'center',
-      fontSize: 28,
-      fontWeight: 'bold',
-      fill: WHITE,
-      fontFamily: 'Arial, sans-serif',
-      selectable: false,
-      evented: false
-    });
-    canvas.add(lepText);
-
-    // Step 7: Add descriptive copy (middle-left area)
-    const copyText = new fabric.Text('Fresh quality\nguaranteed', {
-      left: 120,
-      top: 450,
+    // Step 4: Add AI-GENERATED TAGLINE (EDITABLE)
+    addEditableText(productInfo.aiTagline || 'Premium Quality', {
+      left: 80,
+      top: 190,
       originX: 'left',
       originY: 'top',
-      fontSize: 28,
-      fill: '#374151',
+      fontSize: 26,
+      fontWeight: 'normal',
+      fill: '#fbbf24',
       fontFamily: 'Arial, sans-serif',
-      textAlign: 'left',
-      lineHeight: 1.4,
-      selectable: false,
-      evented: false
+      shadow: new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.8)',
+        blur: 8,
+        offsetX: 2,
+        offsetY: 2
+      })
     });
-    canvas.add(copyText);
 
-    // Step 8: Add mandatory tag (BOTTOM, centered, proper size)
-    const tag = new fabric.Text('Selected stores.\nWhile stocks last', {
-      left: canvas.width / 2,
-      top: canvas.height - 120,
+    // Step 5: Price badge (if available, EDITABLE)
+    if (productInfo.price) {
+      const priceBg = new fabric.Rect({
+        left: 80,
+        top: 270,
+        width: 180,
+        height: 75,
+        fill: '#ef4444',
+        rx: 10,
+        ry: 10,
+        selectable: true,
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.5)',
+          blur: 10,
+          offsetY: 5
+        })
+      });
+      canvas.add(priceBg);
+
+      addEditableText(productInfo.price, {
+        left: 170,
+        top: 307,
+        fontSize: 44,
+        fontWeight: 'bold',
+        fill: '#ffffff',
+        fontFamily: 'Arial Black, sans-serif',
+        shadow: null
+      });
+    }
+
+    // Step 6: CTA button (EDITABLE)
+    const ctaY = canvas.height - 140;
+    const ctaRect = new fabric.Rect({
+      left: 80,
+      top: ctaY,
+      width: 270,
+      height: 65,
+      fill: '#10b981',
+      rx: 33,
+      ry: 33,
+      selectable: true,
+      shadow: new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.4)',
+        blur: 15,
+        offsetY: 5
+      })
+    });
+    canvas.add(ctaRect);
+
+    addEditableText('BUY NOW ▶', {
+      left: 215,
+      top: ctaY + 32,
       originX: 'center',
       originY: 'center',
-      fontSize: 24,
-      fill: '#1f2937',
-      fontFamily: 'Arial, sans-serif',
-      textAlign: 'center',
-      lineHeight: 1.3,
-      selectable: false,
-      evented: false
+      fontSize: 26,
+      fontWeight: 'bold',
+      fill: '#ffffff',
+      fontFamily: 'Arial, sans-serif'
     });
-    canvas.add(tag);
+
+    // Step 7: Quality badge (PROPERLY CENTERED in circle)
+    const badgeX = canvas.width - 95;
+    const badgeY = 85;
+    
+    const badge = new fabric.Circle({
+      left: badgeX,
+      top: badgeY,
+      radius: 52,
+      fill: '#fbbf24',
+      stroke: '#ffffff',
+      strokeWidth: 4,
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      shadow: new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.3)',
+        blur: 10
+      })
+    });
+    canvas.add(badge);
+
+    // FIXED: Text properly centered in circle
+    addEditableText('TOP\nQUALITY', {
+      left: badgeX,
+      top: badgeY,
+      originX: 'center',
+      originY: 'center',
+      fontSize: 13,
+      fontWeight: 'bold',
+      fill: '#1f2937',
+      textAlign: 'center',
+      lineHeight: 1.2,
+      fontFamily: 'Arial, sans-serif',
+      shadow: null,
+      selectable: false
+    });
+
+    // Step 8: Position logo (if exists)
+    if (logo) {
+      const logoScale = 75 / Math.max(logo.width, logo.height);
+      logo.set({
+        left: 55,
+        top: 55,
+        scaleX: logoScale,
+        scaleY: logoScale,
+        originX: 'center',
+        originY: 'center',
+        selectable: true,
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.3)',
+          blur: 8
+        })
+      });
+      canvas.bringToFront(logo);
+    }
 
     canvas.renderAll();
     
-    toast.success('✅ LEP creative generated!', {
-      duration: 4000,
-      icon: '🏷️'
+    toast.success('✅ All text is now editable! Click any text to edit.', {
+      duration: 5000,
+      icon: '✏️'
     });
   };
 
@@ -268,95 +572,37 @@ function SmartAssistant() {
       return;
     }
 
-    // Check if LEP is requested
-    const isLEP = detectLEP(localInput);
-
-    const productInfo = extractProductInfo();
     const productImageData = getBestImageForLayout();
+    const logoData = findLogoOnCanvas();
 
-    if (!productImageData && !productInfo.hasImage) {
-      toast.error('⚠️ Please upload a product image first!', {
-        duration: 4000,
-        icon: '📸'
-      });
+    if (!productImageData) {
+      toast.error('⚠️ Please upload a product image first!');
       return;
     }
 
     setIsGeneratingAd(true);
-    setGenerationProgress({ step: 'Starting', progress: 0 });
+    setGenerationProgress({ step: 'Understanding your request...', progress: 5 });
 
     try {
-      // LEP Branch
-      if (isLEP) {
-        setGenerationProgress({ step: 'Creating LEP creative...', progress: 50 });
-        
-        generateLEPCreative(productImageData);
-        
-        setGenerationProgress({ step: 'Complete!', progress: 100 });
-        
-        const results = {
-          recommendations: [
-            {
-              type: 'success',
-              message: '🏷️ LEP creative generated successfully!'
-            },
-            {
-              type: 'info',
-              message: '✓ White background enforced'
-            },
-            {
-              type: 'info',
-              message: '✓ Tesco Blue (#00539F) applied'
-            },
-            {
-              type: 'info',
-              message: '✓ White value tile with price'
-            },
-            {
-              type: 'info',
-              message: '✓ LEP badge positioned top-right'
-            },
-            {
-              type: 'info',
-              message: '✓ Left-aligned copy added'
-            },
-            {
-              type: 'info',
-              message: '✓ Mandatory tag added at bottom'
-            },
-            {
-              type: 'warning',
-              message: '⚠️ All elements locked for compliance'
-            }
-          ]
-        };
+      const brandName = extractBrandName(localInput);
+      const price = extractPrice(localInput);
+      const category = detectCategory(localInput);
+      const productName = extractProductName(localInput, category);
 
-        setAssistantResults(results);
-        toast.success('🏷️ LEP creative ready!', { duration: 4000 });
+      console.log('📊 Analysis:', { brandName, price, category, productName });
 
-        if (!isAutoMode) {
-          setLocalInput('');
-          setAssistantInput('');
-        }
-
-        setIsGeneratingAd(false);
-        setTimeout(() => setGenerationProgress(null), 2000);
-        return;
-      }
-
-      // Normal Ad Generation (existing code for non-LEP)
-      const category = detectCategory(localInput || 'general product');
-      const style = detectStyle(localInput || 'modern');
-
-      const results = {
-        background: null,
-        layout: null,
-        copy: null,
-        processingSteps: []
+      const productInfo = {
+        brandName: brandName,
+        name: productName,
+        price: price,
+        category: category,
+        hasLogo: !!logoData
       };
 
-      // Step 1: Remove Background (20%)
-      setGenerationProgress({ step: 'Removing background...', progress: 20 });
+      const results = { background: null, copy: null, processingSteps: [] };
+
+      // Step 1: Remove Background (15%)
+      setGenerationProgress({ step: 'Removing background...', progress: 15 });
       
       let cleanProductImage = productImageData.src;
       try {
@@ -379,105 +625,75 @@ function SmartAssistant() {
           
           fabric.Image.fromURL(cleanProductImage, (newImg) => {
             const images = canvas.getObjects('image');
-            if (images.length > 0) {
-              const mainImage = images[0];
+            const mainImage = images.find(img => 
+              img.width * img.height === Math.max(...images.map(i => i.width * i.height))
+            );
+            if (mainImage) {
               newImg.set({
                 left: mainImage.left,
                 top: mainImage.top,
                 scaleX: mainImage.scaleX,
                 scaleY: mainImage.scaleY,
-                angle: mainImage.angle,
               });
               canvas.remove(mainImage);
               canvas.add(newImg);
+              
+              productImageData.object = newImg;
+              productImageData.src = cleanProductImage;
+              
               canvas.renderAll();
             }
           }, { crossOrigin: 'anonymous' });
 
           results.processingSteps.push({ step: 'background_removal', success: true });
         }
-      } catch (bgError) {
-        console.warn('Background removal skipped:', bgError);
+      } catch (error) {
+        console.warn('Background removal skipped:', error);
         results.processingSteps.push({ step: 'background_removal', success: false });
       }
 
-      // Step 2: Generate Background (40%)
-      setGenerationProgress({ step: 'Generating background...', progress: 40 });
-      let backgroundUrl = null;
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Step 2: Generate SMART Copy (35%)
+      setGenerationProgress({ step: 'Writing product-specific copy...', progress: 35 });
       
-      try {
-        const backgroundPrompt = `${style} background for ${category} product advertisement, professional, high quality`;
-        
-        const bgResponse = await fetch('http://localhost:3000/api/image/generate-background', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: backgroundPrompt,
-            style: style,
-            width: 1080,
-            height: 1080
-          }),
-        });
+      const aiCopy = await generateSmartCopy(productInfo);
+      productInfo.aiHeadline = aiCopy.headline;
+      productInfo.aiTagline = aiCopy.tagline;
+      
+      console.log('✅ AI Copy:', aiCopy);
+      results.copy = [aiCopy];
+      results.processingSteps.push({ step: 'copy', success: true });
 
-        const bgData = await bgResponse.json();
-        if (bgData.success) {
-          backgroundUrl = bgData.data.download_url.startsWith('http') 
-            ? bgData.data.download_url 
-            : `http://localhost:8000${bgData.data.download_url}`;
-          
-          results.background = {
-            url: backgroundUrl,
-            metadata: bgData.data.metadata
-          };
-          results.processingSteps.push({ step: 'background', success: true });
-        }
-      } catch (bgError) {
-        console.warn('Background generation failed:', bgError);
-        results.processingSteps.push({ step: 'background', success: false });
-      }
-
-      // Apply background if generated
+      // Step 3: Generate SMART Background (60%)
+      setGenerationProgress({ step: `Creating ${category}-themed background...`, progress: 60 });
+      
+      const backgroundUrl = await generateSmartBackground(category, productName);
       if (backgroundUrl) {
-        fabric.Image.fromURL(backgroundUrl, (img) => {
-          const scale = Math.max(
-            canvas.width / img.width,
-            canvas.height / img.height
-          );
-          img.set({
-            left: 0,
-            top: 0,
-            scaleX: scale,
-            scaleY: scale,
-            selectable: false,
-            evented: false,
-          });
-          canvas.add(img);
-          canvas.sendToBack(img);
-          canvas.renderAll();
-        }, { crossOrigin: 'anonymous' });
+        results.background = { url: backgroundUrl };
+        results.processingSteps.push({ step: 'background', success: true });
       }
+
+      // Step 4: Create Layout (85%)
+      setGenerationProgress({ step: 'Designing layout...', progress: 85 });
+
+      await createSmartLayout(productImageData, productInfo, backgroundUrl, logoData);
 
       setGenerationProgress({ step: 'Complete!', progress: 100 });
 
       const successfulSteps = results.processingSteps.filter(s => s.success).length;
       
       results.recommendations = [
-        {
-          type: 'success',
-          message: `✨ Complete ${category} ad generated successfully!`
-        },
-        {
-          type: 'success',
-          message: `🎨 ${successfulSteps}/${results.processingSteps.length} AI steps completed`
-        },
-        {
-          type: 'info',
-          message: '💡 Explore variations in Layouts, Copy, and Colors tabs'
-        }
+        { type: 'success', message: `✨ ${productName} ad created!` },
+        { type: 'success', message: `✏️ All text is editable - just click to edit!` },
+        { type: 'info', message: `📝 Headline: "${aiCopy.headline}"` },
+        { type: 'info', message: `📝 Tagline: "${aiCopy.tagline}"` },
+        { type: 'info', message: `🎨 Background: ${category}-themed` },
+        { type: 'info', message: `✅ ${successfulSteps}/${results.processingSteps.length} steps completed` }
       ];
 
       setAssistantResults(results);
-      toast.success('🎉 Your ad is ready!', { duration: 4000 });
+      toast.success('🎉 Your ad is ready! Click any text to edit it.', { duration: 5000 });
 
       if (!isAutoMode) {
         setLocalInput('');
@@ -486,13 +702,10 @@ function SmartAssistant() {
 
     } catch (error) {
       console.error('❌ Ad generation failed:', error);
-      toast.error('Failed to generate ad. Please try again.');
+      toast.error('Failed to generate ad');
       setAssistantResults({
         success: false,
-        recommendations: [{
-          type: 'error',
-          message: `Error: ${error.message}`
-        }]
+        recommendations: [{ type: 'error', message: `Error: ${error.message}` }]
       });
     } finally {
       setIsGeneratingAd(false);
@@ -500,30 +713,22 @@ function SmartAssistant() {
     }
   };
 
-  // Auto-generate on image upload
   useEffect(() => {
     if (!canvas || !autoMode) return;
 
     const handleImageAdded = (e) => {
-      const obj = e.target;
-      if (obj.type === 'image') {
-        console.log('📸 Image detected! Auto-triggering ad generation...');
-        
-        const productInfo = extractProductInfo();
-        if (productInfo.hasImage) {
-          setTimeout(() => {
-            generateCompleteAd(true);
-          }, 1000);
-        }
+      if (e.target?.type === 'image') {
+        console.log('📸 Auto-generating ad...');
+        setTimeout(() => {
+          setLocalInput('Create a professional ad for this product');
+          generateCompleteAd(true);
+        }, 1000);
       }
     };
 
     canvas.on('object:added', handleImageAdded);
-
-    return () => {
-      canvas.off('object:added', handleImageAdded);
-    };
-  }, [canvas, autoMode]); // Now only depends on canvas and autoMode
+    return () => canvas.off('object:added', handleImageAdded);
+  }, [canvas, autoMode]); 
 
   const handleExampleClick = (prompt) => {
     setLocalInput(prompt);
@@ -546,11 +751,10 @@ function SmartAssistant() {
           AI Smart Assistant
         </h3>
         <p style={{ fontSize: '13px', color: '#6b7280' }}>
-          Complete ad generation: Background + Layout + Copy
+          Smart AI: Product-specific copy, matching backgrounds, editable text
         </p>
       </div>
 
-      {/* Auto Mode Toggle */}
       <div style={{ 
         padding: '12px', 
         backgroundColor: autoMode ? '#f0fdf4' : '#f3f4f6', 
@@ -583,30 +787,11 @@ function SmartAssistant() {
         </button>
       </div>
 
-      {/* LEP Mode Indicator */}
-      {localInput && detectLEP(localInput) && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#fef3c7',
-          border: '2px solid #f59e0b',
-          borderRadius: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '13px',
-          color: '#92400e'
-        }}>
-          <Tag size={16} />
-          <span><strong>LEP Mode Detected:</strong> Strict compliance rules will be enforced</span>
-        </div>
-      )}
-
-      {/* Input Form */}
       <form onSubmit={(e) => { e.preventDefault(); generateCompleteAd(); }} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <textarea
           value={localInput}
           onChange={handleInputChange}
-          placeholder="E.g., 'Create an LEP ad for these potatoes' or 'Generate a vibrant beverage ad campaign'"
+          placeholder='E.g., "Create a kettle advertisement" or "My brand is Asian Paints, Rs 3000"'
           rows={4}
           style={{
             width: '100%',
@@ -647,13 +832,12 @@ function SmartAssistant() {
           ) : (
             <>
               <Wand2 size={18} />
-              Generate Complete Ad
+              Generate Smart Ad
             </>
           )}
         </button>
       </form>
 
-      {/* Progress Bar */}
       {generationProgress && (
         <div style={{
           padding: '16px',
@@ -686,7 +870,6 @@ function SmartAssistant() {
         </div>
       )}
 
-      {/* Example Prompts */}
       {!assistantResults && !isGeneratingAd && (
         <div>
           <label style={{ 
@@ -696,7 +879,7 @@ function SmartAssistant() {
             marginBottom: '8px', 
             display: 'block' 
           }}>
-            Try these examples:
+            Try these:
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {examplePrompts.map((prompt, index) => (
@@ -729,7 +912,6 @@ function SmartAssistant() {
         </div>
       )}
 
-      {/* Results Display */}
       {assistantResults && !isGeneratingAd && (
         <div style={{ 
           marginTop: '20px', 
@@ -748,56 +930,52 @@ function SmartAssistant() {
             color: '#1f2937'
           }}>
             <Sparkles size={16} color="#8b5cf6" />
-            Generation Results
+            Results
           </h4>
 
-          {assistantResults.recommendations && assistantResults.recommendations.length > 0 && (
-            <div style={{ marginBottom: '16px' }}>
-              {assistantResults.recommendations.map((rec, index) => {
-                const isSuccess = rec.type === 'success';
-                const isWarning = rec.type === 'warning';
-                const isInfo = rec.type === 'info';
-                const isError = rec.type === 'error';
-                
-                const icon = isSuccess ? (
-                  <CheckCircle size={16} color="#10b981" />
-                ) : isWarning ? (
-                  <AlertCircle size={16} color="#f59e0b" />
-                ) : isError ? (
-                  <AlertCircle size={16} color="#ef4444" />
-                ) : (
-                  <Info size={16} color="#3b82f6" />
-                );
+          {assistantResults.recommendations?.map((rec, index) => {
+            const isSuccess = rec.type === 'success';
+            const isWarning = rec.type === 'warning';
+            const isInfo = rec.type === 'info';
+            const isError = rec.type === 'error';
+            
+            const icon = isSuccess ? (
+              <CheckCircle size={16} color="#10b981" />
+            ) : isWarning ? (
+              <AlertCircle size={16} color="#f59e0b" />
+            ) : isError ? (
+              <AlertCircle size={16} color="#ef4444" />
+            ) : (
+              <Info size={16} color="#3b82f6" />
+            );
 
-                const bgColor = isSuccess ? '#f0fdf4' : isWarning ? '#fffbeb' : isError ? '#fef2f2' : '#eff6ff';
-                const borderColor = isSuccess ? '#bbf7d0' : isWarning ? '#fcd34d' : isError ? '#fca5a5' : '#bfdbfe';
+            const bgColor = isSuccess ? '#f0fdf4' : isWarning ? '#fffbeb' : isError ? '#fef2f2' : '#eff6ff';
+            const borderColor = isSuccess ? '#bbf7d0' : isWarning ? '#fcd34d' : isError ? '#fca5a5' : '#bfdbfe';
 
-                return (
-                  <div
-                    key={index}
-                    style={{
-                      padding: '12px',
-                      backgroundColor: bgColor,
-                      border: `1px solid ${borderColor}`,
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '10px'
-                    }}
-                  >
-                    <div style={{ flexShrink: 0, marginTop: '2px' }}>
-                      {icon}
-                    </div>
-                    <div style={{ flex: 1, color: '#1f2937', whiteSpace: 'pre-line' }}>
-                      {rec.message}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+            return (
+              <div
+                key={index}
+                style={{
+                  padding: '12px',
+                  backgroundColor: bgColor,
+                  border: `1px solid ${borderColor}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px'
+                }}
+              >
+                <div style={{ flexShrink: 0, marginTop: '2px' }}>
+                  {icon}
+                </div>
+                <div style={{ flex: 1, color: '#1f2937', whiteSpace: 'pre-line' }}>
+                  {rec.message}
+                </div>
+              </div>
+            );
+          })}
 
           <button 
              onClick={() => setAssistantResults(null)}
@@ -816,12 +994,11 @@ function SmartAssistant() {
              onMouseEnter={(e) => e.target.style.backgroundColor = '#f9fafb'}
              onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
           >
-            Clear Results
+            Clear
           </button>
         </div>
       )}
 
-      {/* Instructions */}
       {!assistantResults && !isGeneratingAd && (
         <div style={{
           padding: '12px',
@@ -831,16 +1008,16 @@ function SmartAssistant() {
           fontSize: '12px',
           color: '#1e40af'
         }}>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
             <ImageIcon size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <strong>How it works:</strong>
-              <ol style={{ marginTop: '4px', paddingLeft: '16px' }}>
-                <li>Upload your product image</li>
-                <li>Type "Create an LEP ad" for low everyday price format</li>
-                <li>Or request a normal ad for full creative freedom</li>
-                <li>LEP ads enforce strict Tesco compliance automatically</li>
-              </ol>
+              <strong>Smart Features:</strong>
+              <ul style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                <li>✏️ All text is editable</li>
+                <li>🎨 Product-matching backgrounds</li>
+                <li>🤖 AI-generated relevant copy</li>
+                <li>📱 Logo support</li>
+              </ul>
             </div>
           </div>
         </div>
