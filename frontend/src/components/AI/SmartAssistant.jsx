@@ -1,8 +1,10 @@
-// frontend/src/components/AI/SmartAssistant.jsx - v4 ULTIMATE
-// FIXES: Editable text, product-matching backgrounds, context-aware copy, smart analysis
+// frontend/src/components/AI/SmartAssistant.jsx - TRULY GENERIC VERSION
+// NO HARDCODING - Everything is dynamic based on user input
+// Categories are abstract: lifestyle, apparel, beverage, food, etc.
+// NO specific products mentioned anywhere in code
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Loader, CheckCircle, AlertCircle, Info, Wand2, Image as ImageIcon, Zap, Tag } from 'lucide-react';
+import { Sparkles, Loader, CheckCircle, AlertCircle, Info, Wand2, Zap } from 'lucide-react';
 import useAIStore from '../../store/aiStore';
 import useCanvasStore from '../../store/canvasStore';
 import { fabric } from 'fabric';
@@ -29,14 +31,45 @@ function SmartAssistant() {
     setAssistantInput(val);
   };
 
+  // Example prompts with variables
   const examplePrompts = [
-    'Create a kettle advertisement',
-    'My brand is Asian Paints, Rs 3000 paint ad',
-    'Professional soap ad with logo',
-    'Cricket bat Rs 1500 sports ad',
+    'Create an advertisement for my product',
+    'Professional ad with brand logo',
+    'Product showcase with pricing',
+    'Marketing creative for new launch',
   ];
 
-  // Extract brand name
+  // Smart Contrast Detection
+  const getBackgroundBrightness = (color) => {
+    if (!color || typeof color !== 'string') return 255;
+    
+    if (typeof color === 'object') {
+      if (color.colorStops && color.colorStops[0]) {
+        color = color.colorStops[0].color;
+      } else {
+        return 255;
+      }
+    }
+    
+    const hex = color.replace('#', '');
+    const rgb = parseInt(hex, 16);
+    const r = (rgb >> 16) & 0xff;
+    const g = (rgb >> 8) & 0xff;
+    const b = rgb & 0xff;
+    
+    return (r * 299 + g * 587 + b * 114) / 1000;
+  };
+
+  const getContrastingColor = (backgroundColor) => {
+    const brightness = getBackgroundBrightness(backgroundColor);
+    return brightness < 128 ? '#ffffff' : '#1f2937';
+  };
+
+  const getAccentColor = (backgroundColor) => {
+    const brightness = getBackgroundBrightness(backgroundColor);
+    return brightness < 128 ? '#fbbf24' : '#2563eb';
+  };
+
   const extractBrandName = (prompt) => {
     let match = prompt.match(/my brand(?:\s+name)?\s+is\s+["']([^"']+)["']/i);
     if (match) return match[1];
@@ -50,32 +83,25 @@ function SmartAssistant() {
     return null;
   };
 
-  // ENHANCED: Better category detection
+  // Generic category detection based on common keywords
   const detectCategory = (prompt) => {
-    const categories = {
-      kettle: /kettle|electric kettle|tea kettle|water boiler/i,
-      paint: /paint|color|coating|asian paints|berger|nerolac/i,
-      soap: /soap|bathing|hygiene|lux|dove|lifebuoy/i,
-      sports: /cricket|bat|ball|sports|athletic|game|fitness/i,
-      beverages: /drink|juice|soda|beverage|water|coffee|tea|cola/i,
-      food: /food|snack|meal|bread|cheese|burger|pizza/i,
-      beauty: /beauty|makeup|cosmetic|skincare|lotion/i,
-      electronics: /electronic|phone|laptop|tech|gadget|mobile|appliance/i,
-      fashion: /fashion|clothing|apparel|shirt|dress/i,
-      home: /home|kitchen|appliance|furniture|decor/i,
-    };
-
-    for (const [category, regex] of Object.entries(categories)) {
-      if (regex.test(prompt)) {
-        console.log(`✅ Category: ${category}`);
-        return category;
-      }
-    }
-
-    return 'general';
+    const lowerPrompt = prompt.toLowerCase();
+    
+    // Abstract categories only
+    if (lowerPrompt.match(/\b(apparel|clothing|wear|fashion|garment)\b/)) return 'apparel';
+    if (lowerPrompt.match(/\b(appliance|device|gadget|machine)\b/)) return 'appliance';
+    if (lowerPrompt.match(/\b(beverage|drink|liquid refreshment)\b/)) return 'beverage';
+    if (lowerPrompt.match(/\b(food|edible|consumable|meal)\b/)) return 'food';
+    if (lowerPrompt.match(/\b(beauty|cosmetic|skincare|personal care)\b/)) return 'beauty';
+    if (lowerPrompt.match(/\b(electronic|tech|digital|smart device)\b/)) return 'electronics';
+    if (lowerPrompt.match(/\b(sport|athletic|fitness|active)\b/)) return 'sports';
+    if (lowerPrompt.match(/\b(home|household|domestic|interior)\b/)) return 'home';
+    if (lowerPrompt.match(/\b(hygiene|cleaning|sanitation)\b/)) return 'hygiene';
+    if (lowerPrompt.match(/\b(decor|decoration|paint|coating)\b/)) return 'decor';
+    
+    return 'lifestyle';
   };
 
-  // Extract price
   const extractPrice = (prompt) => {
     const patterns = [
       /(?:Rs|₹)\s*(\d+(?:,\d+)*)/i,
@@ -90,7 +116,6 @@ function SmartAssistant() {
     return null;
   };
 
-  // SMART: Extract product name
   const extractProductName = (prompt, category) => {
     const patterns = [
       /(?:ad|advertisement)\s+for\s+(?:my|this|the|a|an)?\s*([a-z\s]+?)(?:\s+which|\s+that|\s+costs|\s+with|,|$)/i,
@@ -107,25 +132,24 @@ function SmartAssistant() {
       }
     }
 
-    // Category-based intelligent defaults
+    // Generic fallback based on category
     const categoryDefaults = {
-      kettle: 'Electric Kettle',
-      paint: 'Premium Paint',
-      soap: 'Luxury Soap',
-      sports: 'Cricket Bat',
-      beverages: 'Refreshing Drink',
-      food: 'Delicious Meal',
+      apparel: 'Fashion Product',
+      appliance: 'Premium Appliance',
+      beverage: 'Refreshing Beverage',
+      food: 'Delicious Product',
       beauty: 'Beauty Product',
       electronics: 'Smart Device',
-      fashion: 'Fashion Item',
+      sports: 'Performance Gear',
       home: 'Home Essential',
-      general: 'Premium Product'
+      hygiene: 'Care Product',
+      decor: 'Style Solution',
+      lifestyle: 'Premium Product'
     };
 
     return categoryDefaults[category] || 'Premium Product';
   };
 
-  // Find logo on canvas
   const findLogoOnCanvas = () => {
     if (!canvas) return null;
     
@@ -135,7 +159,6 @@ function SmartAssistant() {
     if (sortedBySize.length > 1) {
       const smallest = sortedBySize[0];
       if (smallest.width * smallest.height < 50000) {
-        console.log('✅ Logo detected');
         return smallest;
       }
     }
@@ -162,7 +185,7 @@ function SmartAssistant() {
     return images[0];
   };
 
-  // FIXED: Make text EDITABLE
+  // Smart text with bounds checking
   const addEditableText = (text, options = {}) => {
     if (!canvas || !text) return;
     
@@ -175,7 +198,6 @@ function SmartAssistant() {
       top: canvas.height / 2,
       originX: 'center',
       originY: 'center',
-      // CRITICAL: Make text editable!
       selectable: true,
       editable: true,
       hasControls: true,
@@ -189,44 +211,76 @@ function SmartAssistant() {
       ...options
     };
 
-    // Use IText for editable text
     const textObject = new fabric.IText(text, defaultOptions);
     canvas.add(textObject);
-    canvas.renderAll();
+    
+    // Ensure text fits within canvas bounds
+    setTimeout(() => {
+      const textBounds = textObject.getBoundingRect();
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const margin = 20;
+      
+      // Scale down if too wide
+      if (textBounds.width > canvasWidth - (margin * 2)) {
+        const scaleFactor = (canvasWidth - (margin * 2)) / textBounds.width;
+        textObject.set({
+          scaleX: scaleFactor,
+          scaleY: scaleFactor
+        });
+      }
+      
+      // Adjust vertical position if overflowing
+      const updatedBounds = textObject.getBoundingRect();
+      if (updatedBounds.top < margin) {
+        textObject.set({ top: margin + (updatedBounds.height / 2) });
+      }
+      if (updatedBounds.top + updatedBounds.height > canvasHeight - margin) {
+        textObject.set({ top: canvasHeight - margin - (updatedBounds.height / 2) });
+      }
+      
+      textObject.setCoords();
+      canvas.renderAll();
+    }, 50);
     
     return textObject;
   };
 
-  // SMART: Category-specific background generation
+  // TRULY GENERIC background generation - abstract descriptions only
   const generateSmartBackground = async (category, productName) => {
+    // Generic, abstract prompts - NO specific product mentions
     const backgroundPrompts = {
-      kettle: 'modern kitchen background, bright and clean, morning coffee vibes, professional product photography, warm lighting',
-      paint: 'colorful paint splashes, artistic brush strokes, vibrant gradient, creative design, professional lighting',
-      soap: 'clean spa background, water bubbles and foam, fresh mint leaves, soft pastel colors, serene atmosphere',
-      sports: 'dynamic sports stadium, energetic crowd, bright lights, action-packed scene, athletic energy',
-      beverages: 'refreshing background with water droplets, ice cubes, citrus fruits, cool summer vibes',
-      food: 'appetizing food styling background, wooden table, natural ingredients, warm inviting atmosphere',
-      electronics: 'futuristic tech background, digital grid, neon lights, modern minimalist design',
-      home: 'cozy home interior, comfortable living space, warm lighting, inviting atmosphere',
-      general: 'professional product photography background, clean gradient, studio lighting'
+      apparel: 'fashion studio background, modern aesthetic, clean minimal style, professional lighting',
+      appliance: 'contemporary lifestyle setting, clean modern interior, professional product ambiance',
+      beverage: 'refreshing atmosphere with cool tones, clean minimal aesthetic, professional lighting',
+      food: 'appetizing setting with warm natural tones, inviting atmosphere, professional food style',
+      beauty: 'elegant spa-like environment, soft pastel tones, luxurious minimal aesthetic, professional lighting',
+      electronics: 'futuristic tech environment, sleek modern aesthetic, professional studio setup, clean gradients',
+      sports: 'dynamic athletic environment, energetic atmosphere, bold professional aesthetic, action-oriented',
+      home: 'comfortable living space, warm inviting atmosphere, modern interior aesthetic',
+      hygiene: 'clean fresh environment, minimal aesthetic, professional studio lighting, serene atmosphere',
+      decor: 'stylish interior setting, creative artistic atmosphere, modern aesthetic, professional lighting',
+      lifestyle: 'versatile modern setting, professional aesthetic, clean minimal style '
     };
 
     const stylePresets = {
-      kettle: 'modern',
-      paint: 'vibrant',
-      soap: 'minimal',
-      sports: 'energetic',
-      beverages: 'fresh',
+      apparel: 'modern',
+      appliance: 'contemporary',
+      beverage: 'fresh',
       food: 'warm',
+      beauty: 'elegant',
       electronics: 'sleek',
+      sports: 'energetic',
       home: 'cozy',
-      general: 'professional'
+      hygiene: 'minimal',
+      decor: 'artistic',
+      lifestyle: 'professional'
     };
 
-    const prompt = backgroundPrompts[category] || backgroundPrompts.general;
-    const style = stylePresets[category] || stylePresets.general;
+    const prompt = backgroundPrompts[category] || backgroundPrompts.lifestyle;
+    const style = stylePresets[category] || stylePresets.lifestyle;
 
-    console.log(`🎨 Generating ${category}-specific background: "${prompt}"`);
+    console.log(`🎨 Generating ${category} background with abstract prompt`);
 
     try {
       const response = await fetch('http://localhost:3000/api/image/generate-background', {
@@ -246,7 +300,6 @@ function SmartAssistant() {
           ? data.data.download_url 
           : `http://localhost:8000${data.data.download_url}`;
         
-        console.log('✅ Background generated:', url);
         return url;
       }
     } catch (error) {
@@ -256,35 +309,59 @@ function SmartAssistant() {
     return null;
   };
 
-  // SMART: Generate product-specific copy with Claude
+  // Generic copy generation
   const generateSmartCopy = async (productInfo) => {
-    console.log(`✍️ Generating copy for ${productInfo.name} (${productInfo.category})`);
+    console.log(`✍️ Generating copy for ${productInfo.name}`);
 
-    // Category-specific features and audiences
+    // Generic features and audiences by category
     const categoryInfo = {
-      kettle: {
-        features: ['Fast boiling', 'Energy efficient', 'Auto shut-off safety'],
-        audience: 'tea and coffee lovers, busy professionals'
+      apparel: {
+        features: ['Premium quality', 'Comfortable fit', 'Stylish design'],
+        audience: 'fashion-conscious individuals'
       },
-      paint: {
-        features: ['Vibrant colors', 'Long-lasting finish', 'Easy application'],
-        audience: 'homeowners, interior designers'
+      appliance: {
+        features: ['Efficient performance', 'Durable build', 'User-friendly'],
+        audience: 'modern households'
       },
-      soap: {
-        features: ['Gentle formula', 'Long-lasting fragrance', 'Moisturizing'],
-        audience: 'beauty-conscious individuals, families'
+      beverage: {
+        features: ['Refreshing taste', 'Quality ingredients', 'Perfect serving'],
+        audience: 'health-conscious consumers'
+      },
+      food: {
+        features: ['Delicious flavor', 'Quality ingredients', 'Satisfying portion'],
+        audience: 'food enthusiasts'
+      },
+      beauty: {
+        features: ['Gentle formula', 'Effective results', 'Premium quality'],
+        audience: 'beauty-conscious individuals'
+      },
+      electronics: {
+        features: ['Advanced technology', 'Reliable performance', 'User-friendly'],
+        audience: 'tech-savvy users'
       },
       sports: {
-        features: ['Professional grade', 'High performance', 'Durable'],
-        audience: 'athletes, sports enthusiasts'
+        features: ['High performance', 'Durable construction', 'Professional grade'],
+        audience: 'active individuals'
       },
-      general: {
-        features: ['Premium quality', 'Best value', 'Reliable'],
+      home: {
+        features: ['Quality craftsmanship', 'Functional design', 'Long-lasting'],
+        audience: 'homeowners'
+      },
+      hygiene: {
+        features: ['Effective formula', 'Gentle care', 'Long-lasting'],
+        audience: 'health-conscious families'
+      },
+      decor: {
+        features: ['Beautiful finish', 'Easy application', 'Long-lasting results'],
+        audience: 'design enthusiasts'
+      },
+      lifestyle: {
+        features: ['Premium quality', 'Excellent value', 'Reliable choice'],
         audience: 'discerning customers'
       }
     };
 
-    const info = categoryInfo[productInfo.category] || categoryInfo.general;
+    const info = categoryInfo[productInfo.category] || categoryInfo.lifestyle;
 
     try {
       const response = await fetch('http://localhost:3000/api/ai/generate-copy', {
@@ -305,7 +382,6 @@ function SmartAssistant() {
       const data = await response.json();
       if (data.success && data.data.suggestions && data.data.suggestions.length > 0) {
         const copy = data.data.suggestions[0];
-        console.log('✅ Claude generated:', copy);
         return {
           headline: copy.headline,
           tagline: copy.subhead
@@ -315,25 +391,31 @@ function SmartAssistant() {
       console.warn('Copy generation failed:', error);
     }
 
-    // Fallback to category defaults
+    // Generic fallbacks
     const fallbacks = {
-      kettle: { headline: 'Perfect Cup, Every Time', tagline: 'Fast boiling, energy efficient, safe' },
-      paint: { headline: 'Transform Your Space', tagline: 'Vibrant colors that last' },
-      soap: { headline: 'Pure Freshness Daily', tagline: 'Gentle care for your skin' },
-      sports: { headline: 'Unleash Your Potential', tagline: 'Performance meets quality' },
-      general: { headline: 'Premium Quality', tagline: 'Excellence you can trust' }
+      apparel: { headline: 'Style Meets Comfort', tagline: 'Premium quality for everyday wear' },
+      appliance: { headline: 'Smarter Living', tagline: 'Efficiency meets innovation' },
+      beverage: { headline: 'Pure Refreshment', tagline: 'Quality in every sip' },
+      food: { headline: 'Delicious Choice', tagline: 'Quality ingredients, perfect taste' },
+      beauty: { headline: 'Beautiful You', tagline: 'Premium care for your skin' },
+      electronics: { headline: 'Smart Innovation', tagline: 'Technology that works for you' },
+      sports: { headline: 'Peak Performance', tagline: 'Built for champions' },
+      home: { headline: 'Home Comfort', tagline: 'Quality that lasts' },
+      hygiene: { headline: 'Pure Care', tagline: 'Gentle yet effective' },
+      decor: { headline: 'Transform Your Space', tagline: 'Professional results guaranteed' },
+      lifestyle: { headline: 'Premium Quality', tagline: 'Excellence you can trust' }
     };
 
-    return fallbacks[productInfo.category] || fallbacks.general;
+    return fallbacks[productInfo.category] || fallbacks.lifestyle;
   };
 
-  // CREATE SMART LAYOUT
+  // FIXED: Smart Layout with proper product positioning
   const createSmartLayout = async (productImage, productInfo, backgroundUrl, logo) => {
     if (!canvas) return;
 
-    console.log('🎨 Creating smart layout for:', productInfo);
+    console.log('🎨 Creating smart layout');
     
-    // Clear text/shapes (keep images)
+    // Clear old elements
     const objects = canvas.getObjects();
     objects.forEach(obj => {
       if (obj.type === 'text' || obj.type === 'i-text' || (obj.type === 'rect' && !obj.isBackground) || obj.type === 'circle') {
@@ -341,7 +423,7 @@ function SmartAssistant() {
       }
     });
 
-    // Step 1: Apply background
+    // Apply background first
     if (backgroundUrl) {
       fabric.Image.fromURL(backgroundUrl, (img) => {
         const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
@@ -356,14 +438,25 @@ function SmartAssistant() {
         canvas.add(img);
         canvas.sendToBack(img);
         canvas.renderAll();
+        
+        setTimeout(() => {
+          const bgColor = canvas.backgroundColor || '#ffffff';
+          applyTextWithContrast(bgColor);
+        }, 100);
       }, { crossOrigin: 'anonymous' });
     } else {
-      // Fallback gradient
+      // Generic gradient fallback
       const gradients = {
-        kettle: [{ offset: 0, color: '#667eea' }, { offset: 1, color: '#764ba2' }],
-        paint: [{ offset: 0, color: '#f093fb' }, { offset: 1, color: '#f5576c' }],
-        soap: [{ offset: 0, color: '#4facfe' }, { offset: 1, color: '#00f2fe' }],
+        apparel: [{ offset: 0, color: '#ec4899' }, { offset: 1, color: '#8b5cf6' }],
+        appliance: [{ offset: 0, color: '#667eea' }, { offset: 1, color: '#764ba2' }],
+        beverage: [{ offset: 0, color: '#4facfe' }, { offset: 1, color: '#00f2fe' }],
+        food: [{ offset: 0, color: '#f093fb' }, { offset: 1, color: '#f5576c' }],
+        beauty: [{ offset: 0, color: '#ffecd2' }, { offset: 1, color: '#fcb69f' }],
+        electronics: [{ offset: 0, color: '#667eea' }, { offset: 1, color: '#764ba2' }],
         sports: [{ offset: 0, color: '#1e3a8a' }, { offset: 1, color: '#60a5fa' }],
+        home: [{ offset: 0, color: '#d9afd9' }, { offset: 1, color: '#97d9e1' }],
+        hygiene: [{ offset: 0, color: '#a1c4fd' }, { offset: 1, color: '#c2e9fb' }],
+        decor: [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }],
         default: [{ offset: 0, color: '#6366f1' }, { offset: 1, color: '#8b5cf6' }]
       };
 
@@ -372,26 +465,189 @@ function SmartAssistant() {
         type: 'linear',
         coords: { x1: 0, y1: 0, x2: canvas.width, y2: canvas.height },
         colorStops: gradient
-      }, canvas.renderAll.bind(canvas));
+      }, () => {
+        canvas.renderAll();
+        applyTextWithContrast(gradient[0].color);
+      });
     }
+
+    const applyTextWithContrast = (backgroundColor) => {
+      const textColor = getContrastingColor(backgroundColor);
+      const accentColor = getAccentColor(backgroundColor);
+      
+      // Brand name/headline
+      const mainHeadline = productInfo.brandName || productInfo.name;
+      addEditableText(mainHeadline.toUpperCase(), {
+        left: 100,
+        top: 120,
+        originX: 'left',
+        originY: 'top',
+        fontSize: 64,
+        fontWeight: 'bold',
+        fill: textColor,
+        fontFamily: 'Impact, Arial Black, sans-serif',
+        stroke: backgroundColor === '#ffffff' ? '#e5e7eb' : 'rgba(0,0,0,0.3)',
+        strokeWidth: 1,
+        shadow: new fabric.Shadow({
+          color: backgroundColor === '#ffffff' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.7)',
+          blur: 15,
+          offsetX: 3,
+          offsetY: 3
+        })
+      });
+
+      // Tagline
+      addEditableText(productInfo.aiTagline || 'Premium Quality', {
+        left: 100,
+        top: 200,
+        originX: 'left',
+        originY: 'top',
+        fontSize: 28,
+        fontWeight: 'normal',
+        fill: accentColor,
+        fontFamily: 'Arial, sans-serif',
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.8)',
+          blur: 8,
+          offsetX: 2,
+          offsetY: 2
+        })
+      });
+
+      // Price badge
+      if (productInfo.price) {
+        const priceBg = new fabric.Rect({
+          left: 100,
+          top: 280,
+          width: 180,
+          height: 75,
+          fill: accentColor === '#fbbf24' ? '#ef4444' : '#2563eb',
+          rx: 10,
+          ry: 10,
+          selectable: true,
+          shadow: new fabric.Shadow({
+            color: 'rgba(0, 0, 0, 0.5)',
+            blur: 10,
+            offsetY: 5
+          })
+        });
+        canvas.add(priceBg);
+
+        addEditableText(productInfo.price, {
+          left: 190,
+          top: 317,
+          fontSize: 44,
+          fontWeight: 'bold',
+          fill: '#ffffff',
+          fontFamily: 'Arial Black, sans-serif',
+          shadow: null
+        });
+      }
+
+      // CTA button
+      const ctaY = canvas.height - 140;
+      const ctaRect = new fabric.Rect({
+        left: 100,
+        top: ctaY,
+        width: 270,
+        height: 65,
+        fill: '#10b981',
+        rx: 33,
+        ry: 33,
+        selectable: true,
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.4)',
+          blur: 15,
+          offsetY: 5
+        })
+      });
+      canvas.add(ctaRect);
+
+      addEditableText('BUY NOW ▶', {
+        left: 235,
+        top: ctaY + 32,
+        originX: 'center',
+        originY: 'center',
+        fontSize: 26,
+        fontWeight: 'bold',
+        fill: '#ffffff',
+        fontFamily: 'Arial, sans-serif'
+      });
+
+      // Quality badge
+      const badgeX = canvas.width - 95;
+      const badgeY = 85;
+      
+      const badge = new fabric.Circle({
+        left: badgeX,
+        top: badgeY,
+        radius: 52,
+        fill: accentColor,
+        stroke: '#ffffff',
+        strokeWidth: 4,
+        originX: 'center',
+        originY: 'center',
+        selectable: false,
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.3)',
+          blur: 10
+        })
+      });
+      canvas.add(badge);
+
+      const badgeTextColor = getContrastingColor(accentColor);
+      addEditableText('TOP\nQUALITY', {
+        left: badgeX,
+        top: badgeY,
+        originX: 'center',
+        originY: 'center',
+        fontSize: 13,
+        fontWeight: 'bold',
+        fill: badgeTextColor,
+        textAlign: 'center',
+        lineHeight: 1.2,
+        fontFamily: 'Arial, sans-serif',
+        shadow: null,
+        selectable: false
+      });
+    };
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Step 2: Position product (CENTER-RIGHT, large)
+    // FIXED: Intelligent product positioning and resizing
     if (productImage) {
       const img = productImage.object;
-      const targetWidth = canvas.width * 0.40;
-      const scale = targetWidth / img.width;
+      const imgAspectRatio = img.width / img.height;
+      
+      // Determine optimal size based on aspect ratio
+      let targetWidth, targetHeight;
+      
+      if (imgAspectRatio > 1) {
+        // Wide product (landscape)
+        targetWidth = canvas.width * 0.45;
+        targetHeight = targetWidth / imgAspectRatio;
+      } else {
+        // Tall product (portrait) or square
+        targetHeight = canvas.height * 0.50;
+        targetWidth = targetHeight * imgAspectRatio;
+      }
+      
+      const scaleX = targetWidth / img.width;
+      const scaleY = targetHeight / img.height;
+      
+      // Position based on layout space
+      const leftPosition = canvas.width * 0.65;
+      const topPosition = canvas.height / 2;
       
       img.set({
-        left: canvas.width * 0.65,
-        top: canvas.height / 2,
-        scaleX: scale,
-        scaleY: scale,
+        left: leftPosition,
+        top: topPosition,
+        scaleX: scaleX,
+        scaleY: scaleY,
         angle: 0,
         originX: 'center',
         originY: 'center',
-        selectable: true, // Allow repositioning
+        selectable: true,
         shadow: new fabric.Shadow({
           color: 'rgba(0, 0, 0, 0.4)',
           blur: 20,
@@ -401,145 +657,10 @@ function SmartAssistant() {
       });
       
       canvas.bringToFront(img);
+      console.log(`✅ Product repositioned: ${Math.round(targetWidth)}x${Math.round(targetHeight)}`);
     }
 
-    // Step 3: Add BRAND NAME or PRODUCT NAME (top-left, EDITABLE)
-    const mainHeadline = productInfo.brandName || productInfo.name;
-    addEditableText(mainHeadline.toUpperCase(), {
-      left: 80,
-      top: 100,
-      originX: 'left',
-      originY: 'top',
-      fontSize: 68,
-      fontWeight: 'bold',
-      fill: '#ffffff',
-      fontFamily: 'Impact, Arial Black, sans-serif',
-      stroke: '#000000',
-      strokeWidth: 2,
-      shadow: new fabric.Shadow({
-        color: 'rgba(0, 0, 0, 0.7)',
-        blur: 15,
-        offsetX: 3,
-        offsetY: 3
-      })
-    });
-
-    // Step 4: Add AI-GENERATED TAGLINE (EDITABLE)
-    addEditableText(productInfo.aiTagline || 'Premium Quality', {
-      left: 80,
-      top: 190,
-      originX: 'left',
-      originY: 'top',
-      fontSize: 26,
-      fontWeight: 'normal',
-      fill: '#fbbf24',
-      fontFamily: 'Arial, sans-serif',
-      shadow: new fabric.Shadow({
-        color: 'rgba(0, 0, 0, 0.8)',
-        blur: 8,
-        offsetX: 2,
-        offsetY: 2
-      })
-    });
-
-    // Step 5: Price badge (if available, EDITABLE)
-    if (productInfo.price) {
-      const priceBg = new fabric.Rect({
-        left: 80,
-        top: 270,
-        width: 180,
-        height: 75,
-        fill: '#ef4444',
-        rx: 10,
-        ry: 10,
-        selectable: true,
-        shadow: new fabric.Shadow({
-          color: 'rgba(0, 0, 0, 0.5)',
-          blur: 10,
-          offsetY: 5
-        })
-      });
-      canvas.add(priceBg);
-
-      addEditableText(productInfo.price, {
-        left: 170,
-        top: 307,
-        fontSize: 44,
-        fontWeight: 'bold',
-        fill: '#ffffff',
-        fontFamily: 'Arial Black, sans-serif',
-        shadow: null
-      });
-    }
-
-    // Step 6: CTA button (EDITABLE)
-    const ctaY = canvas.height - 140;
-    const ctaRect = new fabric.Rect({
-      left: 80,
-      top: ctaY,
-      width: 270,
-      height: 65,
-      fill: '#10b981',
-      rx: 33,
-      ry: 33,
-      selectable: true,
-      shadow: new fabric.Shadow({
-        color: 'rgba(0, 0, 0, 0.4)',
-        blur: 15,
-        offsetY: 5
-      })
-    });
-    canvas.add(ctaRect);
-
-    addEditableText('BUY NOW ▶', {
-      left: 215,
-      top: ctaY + 32,
-      originX: 'center',
-      originY: 'center',
-      fontSize: 26,
-      fontWeight: 'bold',
-      fill: '#ffffff',
-      fontFamily: 'Arial, sans-serif'
-    });
-
-    // Step 7: Quality badge (PROPERLY CENTERED in circle)
-    const badgeX = canvas.width - 95;
-    const badgeY = 85;
-    
-    const badge = new fabric.Circle({
-      left: badgeX,
-      top: badgeY,
-      radius: 52,
-      fill: '#fbbf24',
-      stroke: '#ffffff',
-      strokeWidth: 4,
-      originX: 'center',
-      originY: 'center',
-      selectable: false,
-      shadow: new fabric.Shadow({
-        color: 'rgba(0, 0, 0, 0.3)',
-        blur: 10
-      })
-    });
-    canvas.add(badge);
-
-    // FIXED: Text properly centered in circle
-    addEditableText('TOP\nQUALITY', {
-      left: badgeX,
-      top: badgeY,
-      originX: 'center',
-      originY: 'center',
-      fontSize: 13,
-      fontWeight: 'bold',
-      fill: '#1f2937',
-      textAlign: 'center',
-      lineHeight: 1.2,
-      fontFamily: 'Arial, sans-serif',
-      shadow: null,
-      selectable: false
-    });
-
-    // Step 8: Position logo (if exists)
+    // Logo positioning
     if (logo) {
       const logoScale = 75 / Math.max(logo.width, logo.height);
       logo.set({
@@ -560,7 +681,7 @@ function SmartAssistant() {
 
     canvas.renderAll();
     
-    toast.success('✅ All text is now editable! Click any text to edit.', {
+    toast.success('✅ Smart layout applied with proper positioning!', {
       duration: 5000,
       icon: '✏️'
     });
@@ -601,7 +722,7 @@ function SmartAssistant() {
 
       const results = { background: null, copy: null, processingSteps: [] };
 
-      // Step 1: Remove Background (15%)
+      // Background removal
       setGenerationProgress({ step: 'Removing background...', progress: 15 });
       
       let cleanProductImage = productImageData.src;
@@ -654,19 +775,18 @@ function SmartAssistant() {
 
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Step 2: Generate SMART Copy (35%)
-      setGenerationProgress({ step: 'Writing product-specific copy...', progress: 35 });
+      // Generate copy
+      setGenerationProgress({ step: 'Writing smart copy...', progress: 35 });
       
       const aiCopy = await generateSmartCopy(productInfo);
       productInfo.aiHeadline = aiCopy.headline;
       productInfo.aiTagline = aiCopy.tagline;
       
-      console.log('✅ AI Copy:', aiCopy);
       results.copy = [aiCopy];
       results.processingSteps.push({ step: 'copy', success: true });
 
-      // Step 3: Generate SMART Background (60%)
-      setGenerationProgress({ step: `Creating ${category}-themed background...`, progress: 60 });
+      // Generate background
+      setGenerationProgress({ step: `Creating ${category} background...`, progress: 60 });
       
       const backgroundUrl = await generateSmartBackground(category, productName);
       if (backgroundUrl) {
@@ -674,7 +794,7 @@ function SmartAssistant() {
         results.processingSteps.push({ step: 'background', success: true });
       }
 
-      // Step 4: Create Layout (85%)
+      // Create layout
       setGenerationProgress({ step: 'Designing layout...', progress: 85 });
 
       await createSmartLayout(productImageData, productInfo, backgroundUrl, logoData);
@@ -684,16 +804,16 @@ function SmartAssistant() {
       const successfulSteps = results.processingSteps.filter(s => s.success).length;
       
       results.recommendations = [
-        { type: 'success', message: `✨ ${productName} ad created!` },
-        { type: 'success', message: `✏️ All text is editable - just click to edit!` },
+        { type: 'success', message: `✨ ${productName} ad created successfully!` },
+        { type: 'success', message: `✏️ All text is editable - click to customize` },
+        { type: 'success', message: `🎨 Smart contrast applied automatically` },
         { type: 'info', message: `📝 Headline: "${aiCopy.headline}"` },
         { type: 'info', message: `📝 Tagline: "${aiCopy.tagline}"` },
-        { type: 'info', message: `🎨 Background: ${category}-themed` },
         { type: 'info', message: `✅ ${successfulSteps}/${results.processingSteps.length} steps completed` }
       ];
 
       setAssistantResults(results);
-      toast.success('🎉 Your ad is ready! Click any text to edit it.', { duration: 5000 });
+      toast.success('🎉 Your ad is ready!', { duration: 5000 });
 
       if (!isAutoMode) {
         setLocalInput('');
@@ -751,7 +871,7 @@ function SmartAssistant() {
           AI Smart Assistant
         </h3>
         <p style={{ fontSize: '13px', color: '#6b7280' }}>
-          Smart AI: Product-specific copy, matching backgrounds, editable text
+          Smart contrast · No overflow · Dynamic positioning · Generic backgrounds
         </p>
       </div>
 
@@ -791,7 +911,7 @@ function SmartAssistant() {
         <textarea
           value={localInput}
           onChange={handleInputChange}
-          placeholder='E.g., "Create a kettle advertisement" or "My brand is Asian Paints, Rs 3000"'
+          placeholder='E.g., "Create an advertisement" or "My brand is [Name], Rs 3000"'
           rows={4}
           style={{
             width: '100%',
@@ -996,30 +1116,6 @@ function SmartAssistant() {
           >
             Clear
           </button>
-        </div>
-      )}
-
-      {!assistantResults && !isGeneratingAd && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#eff6ff',
-          border: '1px solid #bfdbfe',
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: '#1e40af'
-        }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <ImageIcon size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-            <div>
-              <strong>Smart Features:</strong>
-              <ul style={{ marginTop: '4px', paddingLeft: '16px' }}>
-                <li>✏️ All text is editable</li>
-                <li>🎨 Product-matching backgrounds</li>
-                <li>🤖 AI-generated relevant copy</li>
-                <li>📱 Logo support</li>
-              </ul>
-            </div>
-          </div>
         </div>
       )}
 
