@@ -1,4 +1,4 @@
-// frontend/src/utils/valueTileUtils.js
+// frontend/src/utils/valueTileUtils.js - UPDATED VERSION
 import { fabric } from 'fabric';
 
 /**
@@ -19,10 +19,11 @@ export function addValueTileToCanvas(canvas, tileData) {
   }
 
   let tileGroup;
+  const canvasBackgroundColor = canvas.backgroundColor || '#ffffff';
 
   switch (tileData.type) {
     case 'new':
-      tileGroup = createNewTile(tileData);
+      tileGroup = createNewTile(tileData, canvasBackgroundColor);
       break;
     case 'white':
       tileGroup = createWhiteTile(tileData);
@@ -44,19 +45,25 @@ export function addValueTileToCanvas(canvas, tileData) {
     top: margin,
     originX: 'left',
     originY: 'top',
-    // Lock the tile - user cannot move, scale, or rotate it
-    selectable: true,
+    // STRICT LOCK - Cannot be moved, scaled, rotated, or modified in any way
+    selectable: false,  // Changed to false - cannot be selected at all
+    evented: false,     // No events fire on this object
     lockMovementX: true,
     lockMovementY: true,
     lockRotation: true,
     lockScalingX: true,
     lockScalingY: true,
+    lockScalingFlip: true,
+    lockSkewingX: true,
+    lockSkewingY: true,
     hasControls: false,
-    hasBorders: true,
-    borderColor: '#00539F',
+    hasBorders: false,
+    hoverCursor: 'default',
     // Custom property to identify value tiles
     isValueTile: true,
-    tileType: tileData.type
+    tileType: tileData.type,
+    // Exclude from layers panel interactions
+    excludeFromLayers: true
   });
 
   canvas.add(tileGroup);
@@ -67,25 +74,28 @@ export function addValueTileToCanvas(canvas, tileData) {
 }
 
 /**
- * Create NEW tile (predefined, cannot be edited)
+ * Create NEW tile - Shows "Tesco" in Tesco blue with canvas background
+ * Size increased by 30%
  */
-function createNewTile(tileData) {
-  const width = 100;
-  const height = 60;
+function createNewTile(tileData, canvasBackgroundColor = '#ffffff') {
+  const width = 130;  // 100 * 1.3
+  const height = 78;  // 60 * 1.3
 
   const background = new fabric.Rect({
     width: width,
     height: height,
-    fill: tileData.color,
+    fill: canvasBackgroundColor, // Use canvas background color
     rx: 6,
-    ry: 6
+    ry: 6,
+    stroke: '#00539F', // Tesco blue border
+    strokeWidth: 3
   });
 
-  const text = new fabric.Text('NEW', {
-    fontSize: 24,
+  const text = new fabric.Text('Tesco', {
+    fontSize: 32, // Increased by 30% (24 * 1.33)
     fontWeight: 'bold',
-    fill: tileData.textColor,
-    fontFamily: 'Arial, sans-serif',
+    fill: '#00539F', // Tesco blue
+    fontFamily: 'Arial Black, Arial, sans-serif', // Closest to Tesco font
     originX: 'center',
     originY: 'center',
     left: width / 2,
@@ -93,7 +103,8 @@ function createNewTile(tileData) {
   });
 
   const group = new fabric.Group([background, text], {
-    selectable: true
+    selectable: false,
+    evented: false
   });
 
   return group;
@@ -101,23 +112,24 @@ function createNewTile(tileData) {
 
 /**
  * Create White Value Tile (only price editable)
+ * Size increased by 30%
  */
 function createWhiteTile(tileData) {
-  const width = 120;
-  const height = 80;
+  const width = 156;   // 120 * 1.3
+  const height = 104;  // 80 * 1.3
 
   const background = new fabric.Rect({
     width: width,
     height: height,
     fill: tileData.color,
     stroke: tileData.textColor,
-    strokeWidth: 3,
+    strokeWidth: 4,  // Increased by 30%
     rx: 6,
     ry: 6
   });
 
   const priceText = new fabric.Text(`£${tileData.price}`, {
-    fontSize: 32,
+    fontSize: 42, // 32 * 1.3
     fontWeight: 'bold',
     fill: tileData.textColor,
     fontFamily: 'Arial, sans-serif',
@@ -128,7 +140,8 @@ function createWhiteTile(tileData) {
   });
 
   const group = new fabric.Group([background, priceText], {
-    selectable: true
+    selectable: false,
+    evented: false
   });
 
   // Store original data for potential editing
@@ -139,10 +152,12 @@ function createWhiteTile(tileData) {
 
 /**
  * Create Clubcard Price Tile (offer and regular price)
+ * Size increased by 30%
+ * NOW WITH END DATE INPUT (DD/MM format)
  */
 function createClubcardTile(tileData) {
-  const width = 140;
-  const height = 100;
+  const width = 182;   // 140 * 1.3
+  const height = 130;  // 100 * 1.3
 
   const background = new fabric.Rect({
     width: width,
@@ -154,7 +169,7 @@ function createClubcardTile(tileData) {
 
   // Clubcard logo/text
   const clubcardLabel = new fabric.Text('Clubcard', {
-    fontSize: 12,
+    fontSize: 16, // 12 * 1.3
     fontWeight: 'bold',
     fill: tileData.textColor,
     fontFamily: 'Arial, sans-serif',
@@ -166,30 +181,51 @@ function createClubcardTile(tileData) {
 
   // Offer price (large)
   const offerPriceText = new fabric.Text(`£${tileData.offerPrice}`, {
-    fontSize: 36,
+    fontSize: 47, // 36 * 1.3
     fontWeight: 'bold',
     fill: '#fbbf24', // Gold/yellow for Clubcard offers
     fontFamily: 'Arial, sans-serif',
     originX: 'center',
     originY: 'center',
     left: width / 2,
-    top: height / 2
+    top: height / 2 - 5
   });
 
   // Regular price (smaller, strikethrough)
   const regularPriceText = new fabric.Text(`Was £${tileData.regularPrice}`, {
-    fontSize: 12,
+    fontSize: 14, // 12 * 1.17
     fill: tileData.textColor,
     fontFamily: 'Arial, sans-serif',
     originX: 'center',
     originY: 'bottom',
     left: width / 2,
-    top: height - 10,
+    top: height - 25,
     linethrough: true
   });
 
-  const group = new fabric.Group([background, clubcardLabel, offerPriceText, regularPriceText], {
-    selectable: true
+  // End date (DD/MM format) - REQUIRED for Clubcard tiles
+  const endDateText = new fabric.Text(
+    tileData.endDate ? `Ends ${tileData.endDate}` : 'Ends --/--',
+    {
+      fontSize: 11,
+      fill: tileData.textColor,
+      fontFamily: 'Arial, sans-serif',
+      originX: 'center',
+      originY: 'bottom',
+      left: width / 2,
+      top: height - 8
+    }
+  );
+
+  const group = new fabric.Group([
+    background, 
+    clubcardLabel, 
+    offerPriceText, 
+    regularPriceText,
+    endDateText
+  ], {
+    selectable: false,
+    evented: false
   });
 
   // Store original data
@@ -238,9 +274,20 @@ export function hasValueTile(canvas) {
   return canvas.getObjects().some(obj => obj.isValueTile);
 }
 
+/**
+ * Validate DD/MM format
+ */
+export function validateDateFormat(dateString) {
+  if (!dateString) return false;
+  
+  const regex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])$/;
+  return regex.test(dateString);
+}
+
 export default {
   addValueTileToCanvas,
   updateValueTile,
   removeValueTile,
-  hasValueTile
+  hasValueTile,
+  validateDateFormat
 };
