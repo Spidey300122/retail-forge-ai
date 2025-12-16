@@ -1,4 +1,4 @@
-// frontend/src/components/UI/Sidebar.jsx
+// frontend/src/components/UI/Sidebar.jsx - UPDATED VERSION
 import { useState, useEffect } from 'react';
 import { 
   Upload, Layers, Sparkles, MessageSquare, 
@@ -13,10 +13,15 @@ import CopySuggestions from '../AI/CopySuggestions';
 import BackgroundGenerator from '../AI/BackgroundGenerator';
 import BackgroundColorPicker from '../Canvas/BackgroundColorPicker';
 import SmartAssistant from '../AI/SmartAssistant';
+import ValueTileSelector from '../Upload/ValueTileSelector'; // NEW IMPORT
+import useCanvasStore from '../../store/canvasStore';
+import { addValueTileToCanvas } from '../../utils/valueTileUtils'; // NEW IMPORT
+import toast from 'react-hot-toast';
 
 import './Sidebar.css';
 
 function Sidebar({ onAddToCanvas, onAddText }) {
+  const { canvas } = useCanvasStore(); // Get canvas from store
   const [activeTab, setActiveTab] = useState('uploads');
   const [extractedColors, setExtractedColors] = useState([]);
 
@@ -49,6 +54,22 @@ function Sidebar({ onAddToCanvas, onAddText }) {
     window.addEventListener('colorsExtracted', handleColorsExtracted);
     return () => window.removeEventListener('colorsExtracted', handleColorsExtracted);
   }, []);
+
+  // NEW: Handle adding value tile to canvas
+  const handleAddValueTile = (tileData) => {
+    if (!canvas) {
+      toast.error('Canvas not ready');
+      return;
+    }
+
+    const tile = addValueTileToCanvas(canvas, tileData);
+    
+    if (tile) {
+      toast.success(`${tileData.name} added to canvas (top-right, locked)`);
+    } else {
+      toast.error('Failed to add value tile');
+    }
+  };
 
   return (
     <div className="sidebar-root">
@@ -141,6 +162,16 @@ function Sidebar({ onAddToCanvas, onAddText }) {
               <ImageUpload onUploadComplete={(data) => {
                 console.log('Upload complete:', data);
               }} />
+            </section>
+
+            <div className="sidebar-divider" />
+
+            {/* NEW: Value Tile Section */}
+            <section className="sidebar-section">
+              <h3 className="sidebar-heading">
+                Value Tiles
+              </h3>
+              <ValueTileSelector onAddTile={handleAddValueTile} />
             </section>
 
             <div className="sidebar-divider" />
