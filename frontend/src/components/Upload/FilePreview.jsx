@@ -1,6 +1,6 @@
-import { X, Check, Loader } from 'lucide-react';
+import { X, Check, Loader, Crown } from 'lucide-react';
 
-function FilePreview({ file, preview, status, onRemove }) {
+function FilePreview({ file, preview, status, onRemove, isLead = false }) {
   const getStatusIcon = () => {
     switch (status) {
       case 'uploading':
@@ -28,7 +28,32 @@ function FilePreview({ file, preview, status, onRemove }) {
   };
 
   return (
-    <div className={`border-2 rounded-lg p-3 ${getStatusColor()}`}>
+    <div className={`border-2 rounded-lg p-3 relative ${getStatusColor()}`}>
+      {/* Lead Badge */}
+      {isLead && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: '8px',
+            right: '8px',
+            backgroundColor: '#fbbf24',
+            color: '#78350f',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            zIndex: 10
+          }}
+        >
+          <Crown size={12} />
+          LEAD
+        </div>
+      )}
+
       <div className="flex items-center gap-3">
         {/* Preview */}
         <div className="w-16 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-100">

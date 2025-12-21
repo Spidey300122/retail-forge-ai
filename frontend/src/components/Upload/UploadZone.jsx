@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
 import { Upload, Image as ImageIcon } from 'lucide-react';
 
-function UploadZone({ onUpload, accept = 'image/*', maxSize = 10 }) {
+function UploadZone({ onUpload, accept = 'image/*', maxSize = 10, disabled = false }) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
+    if (disabled) return;
     e.preventDefault();
     setIsDragging(true);
   };
@@ -15,6 +16,7 @@ function UploadZone({ onUpload, accept = 'image/*', maxSize = 10 }) {
   };
 
   const handleDrop = (e) => {
+    if (disabled) return;
     e.preventDefault();
     setIsDragging(false);
 
@@ -23,6 +25,7 @@ function UploadZone({ onUpload, accept = 'image/*', maxSize = 10 }) {
   };
 
   const handleFileInput = (e) => {
+    if (disabled) return;
     const files = Array.from(e.target.files);
     handleFiles(files);
   };
@@ -51,6 +54,7 @@ function UploadZone({ onUpload, accept = 'image/*', maxSize = 10 }) {
   };
 
   const handleClick = () => {
+    if (disabled) return;
     fileInputRef.current?.click();
   };
 
@@ -61,10 +65,12 @@ function UploadZone({ onUpload, accept = 'image/*', maxSize = 10 }) {
       onDrop={handleDrop}
       onClick={handleClick}
       className={`
-        border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-        ${isDragging
-          ? 'border-blue-500 bg-blue-50'
-          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+        border-2 border-dashed rounded-lg p-8 text-center transition-colors
+        ${disabled 
+          ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-50' 
+          : isDragging
+            ? 'border-blue-500 bg-blue-50 cursor-pointer'
+            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 cursor-pointer'
         }
       `}
     >
@@ -75,24 +81,32 @@ function UploadZone({ onUpload, accept = 'image/*', maxSize = 10 }) {
         multiple
         onChange={handleFileInput}
         className="hidden"
+        disabled={disabled}
       />
 
       <div className="flex flex-col items-center gap-3">
         <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-          {isDragging ? (
+          {isDragging && !disabled ? (
             <Upload className="text-blue-500" size={32} />
           ) : (
-            <ImageIcon className="text-gray-400" size={32} />
+            <ImageIcon className={disabled ? "text-gray-300" : "text-gray-400"} size={32} />
           )}
         </div>
 
         <div>
-          <p className="text-lg font-medium text-gray-700">
-            {isDragging ? 'Drop files here' : 'Click or drag images here'}
+          <p className={`text-lg font-medium ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>
+            {disabled 
+              ? 'Upload limit reached'
+              : isDragging 
+                ? 'Drop files here' 
+                : 'Click or drag images here'
+            }
           </p>
-          <p className="text-sm text-gray-500 mt-1">
-            PNG, JPG, WEBP up to {maxSize}MB
-          </p>
+          {!disabled && (
+            <p className="text-sm text-gray-500 mt-1">
+              PNG, JPG, WEBP up to {maxSize}MB
+            </p>
+          )}
         </div>
       </div>
     </div>

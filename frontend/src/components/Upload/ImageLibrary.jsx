@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, XCircle } from 'lucide-react';
+import { Trash2, Plus, XCircle, Crown, Package, Award, ImageIcon, Sparkles } from 'lucide-react';
 import './ImageLibrary.css';
 
 function ImageLibrary({ onSelectImage }) {
@@ -39,7 +39,7 @@ function ImageLibrary({ onSelectImage }) {
 
     window.addEventListener('storage', handleStorageChange);
 
-    // Optional: Poll every 5 seconds as backup (reduced from 3s)
+    // Poll every 5 seconds as backup
     const interval = setInterval(loadImages, 5000);
 
     return () => {
@@ -74,13 +74,103 @@ function ImageLibrary({ onSelectImage }) {
     }
   };
 
+  const getImageTypeIcon = (imageType) => {
+    switch (imageType) {
+      case 'packshot':
+        return <Package size={12} />;
+      case 'logo':
+        return <Award size={12} />;
+      case 'background':
+        return <ImageIcon size={12} />;
+      case 'decorative':
+        return <Sparkles size={12} />;
+      default:
+        return null;
+    }
+  };
+
+  const getImageTypeBadge = (imageType, isLead) => {
+    const colors = {
+      packshot: { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' },
+      logo: { bg: '#dcfce7', text: '#166534', border: '#86efac' },
+      background: { bg: '#fef3c7', text: '#854d0e', border: '#fde047' },
+      decorative: { bg: '#f5f3ff', text: '#6b21a8', border: '#d8b4fe' }
+    };
+
+    const color = colors[imageType] || colors.packshot;
+
+    return (
+      <div style={{
+        position: 'absolute',
+        top: '8px',
+        left: '8px',
+        display: 'flex',
+        gap: '4px',
+        alignItems: 'center',
+        zIndex: 10
+      }}>
+        <div style={{
+          backgroundColor: color.bg,
+          color: color.text,
+          padding: '3px 8px',
+          borderRadius: '12px',
+          fontSize: '10px',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          border: `1px solid ${color.border}`,
+          textTransform: 'uppercase',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+          {getImageTypeIcon(imageType)}
+          {imageType === 'decorative' ? 'DECOR' : imageType}
+        </div>
+        
+        {isLead && (
+          <div style={{
+            backgroundColor: '#fbbf24',
+            color: '#78350f',
+            padding: '3px 8px',
+            borderRadius: '12px',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            border: '1px solid #f59e0b',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+          }}>
+            <Crown size={12} />
+            LEAD
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Group images by type
+  const groupedImages = {
+    packshot: images.filter(img => img.imageType === 'packshot'),
+    logo: images.filter(img => img.imageType === 'logo'),
+    background: images.filter(img => img.imageType === 'background'),
+    decorative: images.filter(img => img.imageType === 'decorative'),
+    other: images.filter(img => !img.imageType)
+  };
+
   console.log('🎨 ImageLibrary rendering with', images.length, 'images');
 
   return (
     <div>
       {images.length > 0 && (
         <div className="image-library-header">
-          <span className="image-count">{images.length} image(s)</span>
+          <span className="image-count">
+            {images.length} image(s)
+            {groupedImages.packshot.length > 0 && ` • ${groupedImages.packshot.length} Packshots`}
+            {groupedImages.logo.length > 0 && ` • ${groupedImages.logo.length} Logos`}
+            {groupedImages.background.length > 0 && ` • ${groupedImages.background.length} BG`}
+            {groupedImages.decorative.length > 0 && ` • ${groupedImages.decorative.length} Decor`}
+          </span>
           <button onClick={handleClearAll} className="clear-all-btn">
             <XCircle size={16} />
             Clear All
@@ -91,7 +181,7 @@ function ImageLibrary({ onSelectImage }) {
       {images.length === 0 ? (
         <div className="empty-state">
           <p className="empty-title">No images uploaded yet</p>
-          <p className="empty-subtitle">Upload some images to get started</p>
+          <p className="empty-subtitle">Upload packshots, logos, backgrounds, or decorative elements</p>
         </div>
       ) : (
         <div className="image-grid">
@@ -101,6 +191,9 @@ function ImageLibrary({ onSelectImage }) {
               className="image-card"
               onClick={() => handleAddToCanvas(image)}
             >
+              {/* Type & Lead Badges */}
+              {getImageTypeBadge(image.imageType, image.isLead)}
+
               <img
                 src={image.url}
                 alt={image.filename || 'Image'}

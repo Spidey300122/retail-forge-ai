@@ -1,11 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UploadZone from './UploadZone';
 import FilePreview from './FilePreview';
+import toast from 'react-hot-toast';
 
-function ImageUpload({ onUploadComplete, type = 'product' }) {
+function ImageUpload({ onUploadComplete, imageType = 'packshot', maxUploads = null }) {
   const [files, setFiles] = useState([]);
+  const [uploadCount, setUploadCount] = useState(0);
+
+  // Load existing count from localStorage for packshots
+  useEffect(() => {
+    if (imageType === 'packshot') {
+      const stored = JSON.parse(localStorage.getItem('uploaded_images') || '[]');
+      const packshots = stored.filter(img => img.imageType === 'packshot');
+      setUploadCount(packshots.length);
+    }
+  }, [imageType]);
 
   const handleUpload = async (newFiles) => {
+    // Check packshot limit BEFORE upload
+    if (imageType === 'packshot' && maxUploads) {
+      const remainingSlots = maxUploads - uploadCount;
+      if (newFiles.length > remainingSlots) {
+        toast.error(`Maximum ${maxUploads} packshots allowed. You have ${remainingSlots} slots remaining.`);
+        // Only take the files that fit
+        newFiles = newFiles.slice(0, remainingSlots);
+        if (newFiles.length === 0) return;
+      }
+    }
+
     // Add files to state with initial status
     const filesWithStatus = newFiles.map(file => ({
       file,
@@ -30,13 +52,19 @@ function ImageUpload({ onUploadComplete, type = 'product' }) {
         // Simulate upload delay
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Determine if this is the lead packshot
+        const storedImages = JSON.parse(localStorage.getItem('uploaded_images') || '[]');
+        const existingPackshots = storedImages.filter(img => img.imageType === 'packshot');
+        const isLead = imageType === 'packshot' && existingPackshots.length === 0;
+
         // Create upload data with base64
         const uploadData = {
           imageId: fileData.id,
-          url: base64, // Store base64 instead of blob URL
+          url: base64,
           width: 800,
           height: 600,
-          type: type,
+          imageType: imageType, // 'packshot', 'logo', 'background'
+          isLead: isLead, // First packshot is automatically lead
           filename: fileData.file.name
         };
 
@@ -51,10 +79,14 @@ function ImageUpload({ onUploadComplete, type = 'product' }) {
 
         // ⭐ SAVE TO LOCALSTORAGE
         try {
-          const storedImages = JSON.parse(localStorage.getItem('uploaded_images') || '[]');
           storedImages.push(uploadData);
           localStorage.setItem('uploaded_images', JSON.stringify(storedImages));
-          console.log('✅ Saved to localStorage:', uploadData.filename);
+          console.log(`✅ Saved ${imageType} to localStorage:`, uploadData.filename, isLead ? '(LEAD)' : '');
+          
+          // Update count
+          if (imageType === 'packshot') {
+            setUploadCount(prev => prev + 1);
+          }
         } catch (err) {
           console.error('Failed to save to localStorage:', err);
         }
@@ -91,9 +123,36 @@ function ImageUpload({ onUploadComplete, type = 'product' }) {
     });
   };
 
+  // Calculate if upload should be disabled
+  const isUploadDisabled = imageType === 'packshot' && maxUploads && uploadCount >= maxUploads;
+
   return (
     <div className="space-y-4">
-      <UploadZone onUpload={handleUpload} maxSize={10} />
+      {/* Packshot Counter */}
+      {imageType === 'packshot' && maxUploads && (
+        <div style={{
+          padding: '8px 12px',
+          backgroundColor: uploadCount >= maxUploads ? '#fee2e2' : '#eff6ff',
+          border: `1px solid ${uploadCount >= maxUploads ? '#fca5a5' : '#bfdbfe'}`,
+          borderRadius: '6px',
+          fontSize: '13px',
+          fontWeight: '500',
+          color: uploadCount >= maxUploads ? '#991b1b' : '#1e40af',
+          textAlign: 'center'
+        }}>
+          {uploadCount >= maxUploads ? (
+            <span>⚠️ Maximum {maxUploads} packshots reached</span>
+          ) : (
+            <span>📦 {uploadCount}/{maxUploads} packshots used</span>
+          )}
+        </div>
+      )}
+
+      <UploadZone 
+        onUpload={handleUpload} 
+        maxSize={10}
+        disabled={isUploadDisabled}
+      />
 
       {files.length > 0 && (
         <div className="space-y-2">
@@ -105,6 +164,7 @@ function ImageUpload({ onUploadComplete, type = 'product' }) {
               preview={fileData.preview}
               status={fileData.status}
               onRemove={() => handleRemove(fileData.id)}
+              isLead={fileData.uploadData?.isLead}
             />
           ))}
         </div>
