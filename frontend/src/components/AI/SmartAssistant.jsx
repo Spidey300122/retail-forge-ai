@@ -1,9 +1,5 @@
-// frontend/src/components/AI/SmartAssistant.jsx - TRULY GENERIC VERSION
-// NO HARDCODING - Everything is dynamic based on user input
-// Categories are abstract: lifestyle, apparel, beverage, food, etc.
-// NO specific products mentioned anywhere in code
-
-import { useState, useEffect } from 'react';
+// frontend/src/components/AI/SmartAssistant.jsx - ALL ESLINT WARNINGS FIXED
+import { useState, useEffect, useCallback } from 'react';
 import { Sparkles, Loader, CheckCircle, AlertCircle, Info, Wand2, Zap } from 'lucide-react';
 import useAIStore from '../../store/aiStore';
 import useCanvasStore from '../../store/canvasStore';
@@ -31,7 +27,6 @@ function SmartAssistant() {
     setAssistantInput(val);
   };
 
-  // Example prompts with variables
   const examplePrompts = [
     'Create an advertisement for my product',
     'Professional ad with brand logo',
@@ -39,8 +34,7 @@ function SmartAssistant() {
     'Marketing creative for new launch',
   ];
 
-  // Smart Contrast Detection
-  const getBackgroundBrightness = (color) => {
+  const getBackgroundBrightness = useCallback((color) => {
     if (!color || typeof color !== 'string') return 255;
     
     if (typeof color === 'object') {
@@ -58,19 +52,19 @@ function SmartAssistant() {
     const b = rgb & 0xff;
     
     return (r * 299 + g * 587 + b * 114) / 1000;
-  };
+  }, []);
 
-  const getContrastingColor = (backgroundColor) => {
+  const getContrastingColor = useCallback((backgroundColor) => {
     const brightness = getBackgroundBrightness(backgroundColor);
     return brightness < 128 ? '#ffffff' : '#1f2937';
-  };
+  }, [getBackgroundBrightness]);
 
-  const getAccentColor = (backgroundColor) => {
+  const getAccentColor = useCallback((backgroundColor) => {
     const brightness = getBackgroundBrightness(backgroundColor);
     return brightness < 128 ? '#fbbf24' : '#2563eb';
-  };
+  }, [getBackgroundBrightness]);
 
-  const extractBrandName = (prompt) => {
+  const extractBrandName = useCallback((prompt) => {
     let match = prompt.match(/my brand(?:\s+name)?\s+is\s+["']([^"']+)["']/i);
     if (match) return match[1];
     
@@ -81,13 +75,11 @@ function SmartAssistant() {
     if (match) return match[1];
     
     return null;
-  };
+  }, []);
 
-  // Generic category detection based on common keywords
-  const detectCategory = (prompt) => {
+  const detectCategory = useCallback((prompt) => {
     const lowerPrompt = prompt.toLowerCase();
     
-    // Abstract categories only
     if (lowerPrompt.match(/\b(apparel|clothing|wear|fashion|garment)\b/)) return 'apparel';
     if (lowerPrompt.match(/\b(appliance|device|gadget|machine)\b/)) return 'appliance';
     if (lowerPrompt.match(/\b(beverage|drink|liquid refreshment)\b/)) return 'beverage';
@@ -100,9 +92,9 @@ function SmartAssistant() {
     if (lowerPrompt.match(/\b(decor|decoration|paint|coating)\b/)) return 'decor';
     
     return 'lifestyle';
-  };
+  }, []);
 
-  const extractPrice = (prompt) => {
+  const extractPrice = useCallback((prompt) => {
     const patterns = [
       /(?:Rs|₹)\s*(\d+(?:,\d+)*)/i,
       /(\d+(?:,\d+)*)\s*(?:Rs|rupees)/i,
@@ -114,9 +106,9 @@ function SmartAssistant() {
       if (match) return `Rs ${match[1]}`;
     }
     return null;
-  };
+  }, []);
 
-  const extractProductName = (prompt, category) => {
+  const extractProductName = useCallback((prompt, category) => {
     const patterns = [
       /(?:ad|advertisement)\s+for\s+(?:my|this|the|a|an)?\s*([a-z\s]+?)(?:\s+which|\s+that|\s+costs|\s+with|,|$)/i,
       /create.*?(?:for|of)\s+(?:my|this|the|a|an)?\s*([a-z\s]+?)(?:\s+which|\s+that|\s+costs|\s+with|,|$)/i,
@@ -132,7 +124,6 @@ function SmartAssistant() {
       }
     }
 
-    // Generic fallback based on category
     const categoryDefaults = {
       apparel: 'Fashion Product',
       appliance: 'Premium Appliance',
@@ -148,9 +139,23 @@ function SmartAssistant() {
     };
 
     return categoryDefaults[category] || 'Premium Product';
-  };
+  }, []);
 
-  const findLogoOnCanvas = () => {
+  const detectLEP = useCallback((prompt) => {
+    const lowerPrompt = prompt.toLowerCase();
+    return lowerPrompt.includes('lep') || 
+           lowerPrompt.includes('low everyday price') ||
+           lowerPrompt.includes('low price') ||
+           lowerPrompt.includes('everyday price');
+  }, []);
+
+  const detectExclusive = useCallback((prompt) => {
+    const lowerPrompt = prompt.toLowerCase();
+    return lowerPrompt.includes('exclusive') || 
+           lowerPrompt.includes('only at tesco');
+  }, []);
+
+  const findLogoOnCanvas = useCallback(() => {
     if (!canvas) return null;
     
     const images = canvas.getObjects('image');
@@ -164,9 +169,9 @@ function SmartAssistant() {
     }
     
     return null;
-  };
+  }, [canvas]);
 
-  const getAllImagesFromCanvas = () => {
+  const getAllImagesFromCanvas = useCallback(() => {
     if (!canvas) return [];
     const images = canvas.getObjects('image');
     return images.map(img => ({
@@ -176,17 +181,16 @@ function SmartAssistant() {
       area: img.width * img.height,
       object: img
     }));
-  };
+  }, [canvas]);
 
-  const getBestImageForLayout = () => {
+  const getBestImageForLayout = useCallback(() => {
     const images = getAllImagesFromCanvas();
     if (images.length === 0) return null;
     images.sort((a, b) => b.area - a.area);
     return images[0];
-  };
+  }, [getAllImagesFromCanvas]);
 
-  // Smart text with bounds checking
-  const addEditableText = (text, options = {}) => {
+  const addEditableText = useCallback((text, options = {}) => {
     if (!canvas || !text) return;
     
     const defaultOptions = {
@@ -214,14 +218,12 @@ function SmartAssistant() {
     const textObject = new fabric.IText(text, defaultOptions);
     canvas.add(textObject);
     
-    // Ensure text fits within canvas bounds
     setTimeout(() => {
       const textBounds = textObject.getBoundingRect();
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
       const margin = 20;
       
-      // Scale down if too wide
       if (textBounds.width > canvasWidth - (margin * 2)) {
         const scaleFactor = (canvasWidth - (margin * 2)) / textBounds.width;
         textObject.set({
@@ -230,7 +232,6 @@ function SmartAssistant() {
         });
       }
       
-      // Adjust vertical position if overflowing
       const updatedBounds = textObject.getBoundingRect();
       if (updatedBounds.top < margin) {
         textObject.set({ top: margin + (updatedBounds.height / 2) });
@@ -244,11 +245,9 @@ function SmartAssistant() {
     }, 50);
     
     return textObject;
-  };
+  }, [canvas]);
 
-  // TRULY GENERIC background generation - abstract descriptions only
-  const generateSmartBackground = async (category, productName) => {
-    // Generic, abstract prompts - NO specific product mentions
+  const generateSmartBackground = useCallback(async (category) => {
     const backgroundPrompts = {
       apparel: 'fashion studio background, modern aesthetic, clean minimal style, professional lighting',
       appliance: 'contemporary lifestyle setting, clean modern interior, professional product ambiance',
@@ -307,13 +306,11 @@ function SmartAssistant() {
     }
 
     return null;
-  };
+  }, []);
 
-  // Generic copy generation
-  const generateSmartCopy = async (productInfo) => {
+  const generateSmartCopy = useCallback(async (productInfo) => {
     console.log(`✍️ Generating copy for ${productInfo.name}`);
 
-    // Generic features and audiences by category
     const categoryInfo = {
       apparel: {
         features: ['Premium quality', 'Comfortable fit', 'Stylish design'],
@@ -391,7 +388,6 @@ function SmartAssistant() {
       console.warn('Copy generation failed:', error);
     }
 
-    // Generic fallbacks
     const fallbacks = {
       apparel: { headline: 'Style Meets Comfort', tagline: 'Premium quality for everyday wear' },
       appliance: { headline: 'Smarter Living', tagline: 'Efficiency meets innovation' },
@@ -407,15 +403,189 @@ function SmartAssistant() {
     };
 
     return fallbacks[productInfo.category] || fallbacks.lifestyle;
-  };
+  }, []);
 
-  // FIXED: Smart Layout with proper product positioning
-  const createSmartLayout = async (productImage, productInfo, backgroundUrl, logo) => {
+  const applyTextWithContrast = useCallback((backgroundColor, productInfo, canvasInstance) => {
+    const TESCO_BLUE = '#00539F';
+    const isLEP = productInfo.isLEP;
+    const isExclusive = productInfo.isExclusive;
+    
+    const textColor = isLEP ? TESCO_BLUE : getContrastingColor(backgroundColor);
+    const accentColor = isLEP ? TESCO_BLUE : getAccentColor(backgroundColor);
+    
+    const topSafeZone = 200;
+    const bottomSafeZone = canvasInstance.height - 250;
+    
+    const mainHeadline = productInfo.brandName || productInfo.name;
+    addEditableText(mainHeadline.toUpperCase(), {
+      left: isLEP ? 100 : (canvasInstance.width / 2),
+      top: Math.max(topSafeZone + 60, 120),
+      originX: isLEP ? 'left' : 'center',
+      originY: 'top',
+      fontSize: 64,
+      fontWeight: 'bold',
+      fill: textColor,
+      fontFamily: isLEP ? 'Arial, Helvetica, sans-serif' : 'Impact, Arial Black, sans-serif',
+      stroke: backgroundColor === '#ffffff' ? '#e5e7eb' : 'rgba(0,0,0,0.3)',
+      strokeWidth: isLEP ? 0 : 1,
+      shadow: isLEP ? null : new fabric.Shadow({
+        color: backgroundColor === '#ffffff' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.7)',
+        blur: 15,
+        offsetX: 3,
+        offsetY: 3
+      })
+    });
+
+    addEditableText(productInfo.aiTagline || 'Premium Quality', {
+      left: isLEP ? 100 : (canvasInstance.width / 2),
+      top: Math.max(topSafeZone + 140, 200),
+      originX: isLEP ? 'left' : 'center',
+      originY: 'top',
+      fontSize: 28,
+      fontWeight: 'normal',
+      fill: isLEP ? textColor : accentColor,
+      fontFamily: 'Arial, sans-serif',
+      shadow: isLEP ? null : new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.8)',
+        blur: 8,
+        offsetX: 2,
+        offsetY: 2
+      })
+    });
+
+    if (productInfo.price) {
+      const priceBg = new fabric.Rect({
+        left: isLEP ? 100 : 100,
+        top: Math.max(topSafeZone + 220, 280),
+        width: 180,
+        height: 75,
+        fill: isLEP ? '#ffffff' : (accentColor === '#fbbf24' ? '#ef4444' : '#2563eb'),
+        rx: 10,
+        ry: 10,
+        selectable: true,
+        stroke: isLEP ? TESCO_BLUE : 'transparent',
+        strokeWidth: isLEP ? 3 : 0,
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 0.5)',
+          blur: 10,
+          offsetY: 5
+        })
+      });
+      canvasInstance.add(priceBg);
+
+      addEditableText(productInfo.price, {
+        left: 190,
+        top: Math.max(topSafeZone + 257, 317),
+        fontSize: 44,
+        fontWeight: 'bold',
+        fill: isLEP ? TESCO_BLUE : '#ffffff',
+        fontFamily: 'Arial Black, sans-serif',
+        shadow: null
+      });
+    }
+
+    const tagY = Math.min(bottomSafeZone - 80, canvasInstance.height - 200);
+    
+    const primaryTag = isExclusive ? 'Only at Tesco' : 'Available at Tesco';
+    addEditableText(primaryTag, {
+      left: isLEP ? 100 : 100,
+      top: tagY,
+      originX: 'left',
+      originY: 'top',
+      fontSize: 16,
+      fontWeight: 'bold',
+      fill: isLEP ? TESCO_BLUE : textColor,
+      fontFamily: 'Arial, sans-serif',
+      shadow: null,
+      selectable: true
+    });
+
+    if (isLEP) {
+      addEditableText('Selected stores. While stocks last', {
+        left: 100,
+        top: tagY + 30,
+        originX: 'left',
+        originY: 'top',
+        fontSize: 14,
+        fontWeight: 'normal',
+        fill: TESCO_BLUE,
+        fontFamily: 'Arial, sans-serif',
+        shadow: null,
+        selectable: true
+      });
+    }
+
+    const ctaY = Math.min(bottomSafeZone - 140, canvasInstance.height - 140);
+    const ctaRect = new fabric.Rect({
+      left: isLEP ? 100 : 100,
+      top: ctaY,
+      width: 270,
+      height: 65,
+      fill: '#10b981',
+      rx: 33,
+      ry: 33,
+      selectable: true,
+      shadow: new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.4)',
+        blur: 15,
+        offsetY: 5
+      })
+    });
+    canvasInstance.add(ctaRect);
+
+    addEditableText('BUY NOW ▶', {
+      left: 235,
+      top: ctaY + 32,
+      originX: 'center',
+      originY: 'center',
+      fontSize: 26,
+      fontWeight: 'bold',
+      fill: '#ffffff',
+      fontFamily: 'Arial, sans-serif'
+    });
+
+    const badgeX = canvasInstance.width - 95;
+    const badgeY = Math.max(topSafeZone - 50, 85);
+    
+    const badge = new fabric.Circle({
+      left: badgeX,
+      top: badgeY,
+      radius: 52,
+      fill: accentColor,
+      stroke: '#ffffff',
+      strokeWidth: 4,
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      shadow: new fabric.Shadow({
+        color: 'rgba(0, 0, 0, 0.3)',
+        blur: 10
+      })
+    });
+    canvasInstance.add(badge);
+
+    const badgeTextColor = getContrastingColor(accentColor);
+    addEditableText('TOP\nQUALITY', {
+      left: badgeX,
+      top: badgeY,
+      originX: 'center',
+      originY: 'center',
+      fontSize: 13,
+      fontWeight: 'bold',
+      fill: badgeTextColor,
+      textAlign: 'center',
+      lineHeight: 1.2,
+      fontFamily: 'Arial, sans-serif',
+      shadow: null,
+      selectable: false
+    });
+  }, [addEditableText, getContrastingColor, getAccentColor]);
+
+  const createSmartLayout = useCallback(async (productImage, productInfo, backgroundUrl, logo) => {
     if (!canvas) return;
 
     console.log('🎨 Creating smart layout');
     
-    // Clear old elements
     const objects = canvas.getObjects();
     objects.forEach(obj => {
       if (obj.type === 'text' || obj.type === 'i-text' || (obj.type === 'rect' && !obj.isBackground) || obj.type === 'circle') {
@@ -423,8 +593,14 @@ function SmartAssistant() {
       }
     });
 
-    // Apply background first
-    if (backgroundUrl) {
+    const isLEP = productInfo.isLEP;
+
+    if (isLEP) {
+      canvas.setBackgroundColor('#ffffff', () => {
+        canvas.renderAll();
+        applyTextWithContrast('#ffffff', productInfo, canvas);
+      });
+    } else if (backgroundUrl) {
       fabric.Image.fromURL(backgroundUrl, (img) => {
         const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
         img.set({
@@ -441,11 +617,10 @@ function SmartAssistant() {
         
         setTimeout(() => {
           const bgColor = canvas.backgroundColor || '#ffffff';
-          applyTextWithContrast(bgColor);
+          applyTextWithContrast(bgColor, productInfo, canvas);
         }, 100);
       }, { crossOrigin: 'anonymous' });
     } else {
-      // Generic gradient fallback
       const gradients = {
         apparel: [{ offset: 0, color: '#ec4899' }, { offset: 1, color: '#8b5cf6' }],
         appliance: [{ offset: 0, color: '#667eea' }, { offset: 1, color: '#764ba2' }],
@@ -467,167 +642,22 @@ function SmartAssistant() {
         colorStops: gradient
       }, () => {
         canvas.renderAll();
-        applyTextWithContrast(gradient[0].color);
+        applyTextWithContrast(gradient[0].color, productInfo, canvas);
       });
     }
 
-    const applyTextWithContrast = (backgroundColor) => {
-      const textColor = getContrastingColor(backgroundColor);
-      const accentColor = getAccentColor(backgroundColor);
-      
-      // Brand name/headline
-      const mainHeadline = productInfo.brandName || productInfo.name;
-      addEditableText(mainHeadline.toUpperCase(), {
-        left: 100,
-        top: 120,
-        originX: 'left',
-        originY: 'top',
-        fontSize: 64,
-        fontWeight: 'bold',
-        fill: textColor,
-        fontFamily: 'Impact, Arial Black, sans-serif',
-        stroke: backgroundColor === '#ffffff' ? '#e5e7eb' : 'rgba(0,0,0,0.3)',
-        strokeWidth: 1,
-        shadow: new fabric.Shadow({
-          color: backgroundColor === '#ffffff' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.7)',
-          blur: 15,
-          offsetX: 3,
-          offsetY: 3
-        })
-      });
-
-      // Tagline
-      addEditableText(productInfo.aiTagline || 'Premium Quality', {
-        left: 100,
-        top: 200,
-        originX: 'left',
-        originY: 'top',
-        fontSize: 28,
-        fontWeight: 'normal',
-        fill: accentColor,
-        fontFamily: 'Arial, sans-serif',
-        shadow: new fabric.Shadow({
-          color: 'rgba(0, 0, 0, 0.8)',
-          blur: 8,
-          offsetX: 2,
-          offsetY: 2
-        })
-      });
-
-      // Price badge
-      if (productInfo.price) {
-        const priceBg = new fabric.Rect({
-          left: 100,
-          top: 280,
-          width: 180,
-          height: 75,
-          fill: accentColor === '#fbbf24' ? '#ef4444' : '#2563eb',
-          rx: 10,
-          ry: 10,
-          selectable: true,
-          shadow: new fabric.Shadow({
-            color: 'rgba(0, 0, 0, 0.5)',
-            blur: 10,
-            offsetY: 5
-          })
-        });
-        canvas.add(priceBg);
-
-        addEditableText(productInfo.price, {
-          left: 190,
-          top: 317,
-          fontSize: 44,
-          fontWeight: 'bold',
-          fill: '#ffffff',
-          fontFamily: 'Arial Black, sans-serif',
-          shadow: null
-        });
-      }
-
-      // CTA button
-      const ctaY = canvas.height - 140;
-      const ctaRect = new fabric.Rect({
-        left: 100,
-        top: ctaY,
-        width: 270,
-        height: 65,
-        fill: '#10b981',
-        rx: 33,
-        ry: 33,
-        selectable: true,
-        shadow: new fabric.Shadow({
-          color: 'rgba(0, 0, 0, 0.4)',
-          blur: 15,
-          offsetY: 5
-        })
-      });
-      canvas.add(ctaRect);
-
-      addEditableText('BUY NOW ▶', {
-        left: 235,
-        top: ctaY + 32,
-        originX: 'center',
-        originY: 'center',
-        fontSize: 26,
-        fontWeight: 'bold',
-        fill: '#ffffff',
-        fontFamily: 'Arial, sans-serif'
-      });
-
-      // Quality badge
-      const badgeX = canvas.width - 95;
-      const badgeY = 85;
-      
-      const badge = new fabric.Circle({
-        left: badgeX,
-        top: badgeY,
-        radius: 52,
-        fill: accentColor,
-        stroke: '#ffffff',
-        strokeWidth: 4,
-        originX: 'center',
-        originY: 'center',
-        selectable: false,
-        shadow: new fabric.Shadow({
-          color: 'rgba(0, 0, 0, 0.3)',
-          blur: 10
-        })
-      });
-      canvas.add(badge);
-
-      const badgeTextColor = getContrastingColor(accentColor);
-      addEditableText('TOP\nQUALITY', {
-        left: badgeX,
-        top: badgeY,
-        originX: 'center',
-        originY: 'center',
-        fontSize: 13,
-        fontWeight: 'bold',
-        fill: badgeTextColor,
-        textAlign: 'center',
-        lineHeight: 1.2,
-        fontFamily: 'Arial, sans-serif',
-        shadow: null,
-        selectable: false
-      });
-    };
-
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // FIXED: Intelligent product positioning and resizing
     if (productImage) {
       const img = productImage.object;
       const imgAspectRatio = img.width / img.height;
       
-      // Determine optimal size based on aspect ratio
       let targetWidth, targetHeight;
       
       if (imgAspectRatio > 1) {
-        // Wide product (landscape)
         targetWidth = canvas.width * 0.45;
         targetHeight = targetWidth / imgAspectRatio;
       } else {
-        // Tall product (portrait) or square
         targetHeight = canvas.height * 0.50;
         targetWidth = targetHeight * imgAspectRatio;
       }
@@ -635,8 +665,7 @@ function SmartAssistant() {
       const scaleX = targetWidth / img.width;
       const scaleY = targetHeight / img.height;
       
-      // Position based on layout space
-      const leftPosition = canvas.width * 0.65;
+      const leftPosition = isLEP ? (canvas.width * 0.70) : (canvas.width * 0.65);
       const topPosition = canvas.height / 2;
       
       img.set({
@@ -660,12 +689,14 @@ function SmartAssistant() {
       console.log(`✅ Product repositioned: ${Math.round(targetWidth)}x${Math.round(targetHeight)}`);
     }
 
-    // Logo positioning
     if (logo) {
       const logoScale = 75 / Math.max(logo.width, logo.height);
+      const logoLeft = isLEP ? (canvas.width * 0.85) : 55;
+      const logoTop = isLEP ? (canvas.height / 2) : 55;
+      
       logo.set({
-        left: 55,
-        top: 55,
+        left: logoLeft,
+        top: logoTop,
         scaleX: logoScale,
         scaleY: logoScale,
         originX: 'center',
@@ -681,13 +712,13 @@ function SmartAssistant() {
 
     canvas.renderAll();
     
-    toast.success('✅ Smart layout applied with proper positioning!', {
+    toast.success('✅ Smart layout applied with compliance!', {
       duration: 5000,
       icon: '✏️'
     });
-  };
+  }, [canvas, applyTextWithContrast]);
 
-  const generateCompleteAd = async (isAutoMode = false) => {
+  const generateCompleteAd = useCallback(async (isAutoMode = false) => {
     if (!isAutoMode && !localInput.trim()) {
       toast.error('Please describe the ad you want to create');
       return;
@@ -709,20 +740,24 @@ function SmartAssistant() {
       const price = extractPrice(localInput);
       const category = detectCategory(localInput);
       const productName = extractProductName(localInput, category);
+      
+      const isLEP = detectLEP(localInput);
+      const isExclusive = detectExclusive(localInput);
 
-      console.log('📊 Analysis:', { brandName, price, category, productName });
+      console.log('📊 Analysis:', { brandName, price, category, productName, isLEP, isExclusive });
 
       const productInfo = {
         brandName: brandName,
         name: productName,
         price: price,
         category: category,
-        hasLogo: !!logoData
+        hasLogo: !!logoData,
+        isLEP: isLEP,
+        isExclusive: isExclusive
       };
 
       const results = { background: null, copy: null, processingSteps: [] };
 
-      // Background removal
       setGenerationProgress({ step: 'Removing background...', progress: 15 });
       
       let cleanProductImage = productImageData.src;
@@ -775,7 +810,6 @@ function SmartAssistant() {
 
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Generate copy
       setGenerationProgress({ step: 'Writing smart copy...', progress: 35 });
       
       const aiCopy = await generateSmartCopy(productInfo);
@@ -785,16 +819,20 @@ function SmartAssistant() {
       results.copy = [aiCopy];
       results.processingSteps.push({ step: 'copy', success: true });
 
-      // Generate background
-      setGenerationProgress({ step: `Creating ${category} background...`, progress: 60 });
-      
-      const backgroundUrl = await generateSmartBackground(category, productName);
-      if (backgroundUrl) {
-        results.background = { url: backgroundUrl };
-        results.processingSteps.push({ step: 'background', success: true });
+      let backgroundUrl = null;
+      if (!isLEP) {
+        setGenerationProgress({ step: `Creating ${category} background...`, progress: 60 });
+        
+        backgroundUrl = await generateSmartBackground(category);
+        if (backgroundUrl) {
+          results.background = { url: backgroundUrl };
+          results.processingSteps.push({ step: 'background', success: true });
+        }
+      } else {
+        setGenerationProgress({ step: 'Using LEP white background...', progress: 60 });
+        results.processingSteps.push({ step: 'lep_background', success: true });
       }
 
-      // Create layout
       setGenerationProgress({ step: 'Designing layout...', progress: 85 });
 
       await createSmartLayout(productImageData, productInfo, backgroundUrl, logoData);
@@ -809,8 +847,25 @@ function SmartAssistant() {
         { type: 'success', message: `🎨 Smart contrast applied automatically` },
         { type: 'info', message: `📝 Headline: "${aiCopy.headline}"` },
         { type: 'info', message: `📝 Tagline: "${aiCopy.tagline}"` },
-        { type: 'info', message: `✅ ${successfulSteps}/${results.processingSteps.length} steps completed` }
       ];
+
+      if (isLEP) {
+        results.recommendations.push({
+          type: 'success',
+          message: '✅ LEP compliance: White background, Tesco blue, left-aligned, mandatory tags'
+        });
+      }
+
+      const tagText = isExclusive ? 'Only at Tesco' : 'Available at Tesco';
+      results.recommendations.push({
+        type: 'success',
+        message: `🏷️ Tesco tag: "${tagText}"${isLEP ? ' + "Selected stores. While stocks last"' : ''}`
+      });
+
+      results.recommendations.push({
+        type: 'info',
+        message: `✅ ${successfulSteps}/${results.processingSteps.length} steps completed`
+      });
 
       setAssistantResults(results);
       toast.success('🎉 Your ad is ready!', { duration: 5000 });
@@ -831,7 +886,7 @@ function SmartAssistant() {
       setIsGeneratingAd(false);
       setTimeout(() => setGenerationProgress(null), 2000);
     }
-  };
+  }, [localInput, canvas, createSmartLayout, extractBrandName, extractPrice, detectCategory, extractProductName, detectLEP, detectExclusive, generateSmartCopy, generateSmartBackground, setAssistantInput, setAssistantResults, getBestImageForLayout, findLogoOnCanvas]);
 
   useEffect(() => {
     if (!canvas || !autoMode) return;
@@ -848,7 +903,7 @@ function SmartAssistant() {
 
     canvas.on('object:added', handleImageAdded);
     return () => canvas.off('object:added', handleImageAdded);
-  }, [canvas, autoMode]); 
+  }, [canvas, autoMode, generateCompleteAd]); 
 
   const handleExampleClick = (prompt) => {
     setLocalInput(prompt);
@@ -871,7 +926,7 @@ function SmartAssistant() {
           AI Smart Assistant
         </h3>
         <p style={{ fontSize: '13px', color: '#6b7280' }}>
-          Smart contrast · No overflow · Dynamic positioning · Generic backgrounds
+          LEP compliance · Tesco tags · Safe zones · Dynamic positioning
         </p>
       </div>
 
@@ -911,7 +966,7 @@ function SmartAssistant() {
         <textarea
           value={localInput}
           onChange={handleInputChange}
-          placeholder='E.g., "Create an advertisement" or "My brand is [Name], Rs 3000"'
+          placeholder='E.g., "LEP ad for my product" or "Exclusive at Tesco"'
           rows={4}
           style={{
             width: '100%',
