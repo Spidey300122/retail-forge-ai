@@ -1,0 +1,48 @@
+services:
+  # Node.js Backend API
+  - type: web
+    name: retail-forge-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: FRONTEND_URL
+        value: https://retail-forge-ai.vercel.app
+      # These will be added manually in Render dashboard (don't commit real values)
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: STABILITY_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: retail-forge-db
+          property: connectionString
+
+  # Python Image Service
+  - type: web
+    name: retail-forge-image-service
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python image-service.py
+    healthCheckPath: /health
+    envVars:
+      - key: IMAGE_SERVICE_PORT
+        value: 8000
+      - key: STABILITY_API_KEY
+        sync: false
+
+databases:
+  - name: retail-forge-db
+    plan: free
+    databaseName: retail_forge_ai
