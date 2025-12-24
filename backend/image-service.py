@@ -24,10 +24,19 @@ load_dotenv()
 
 app = FastAPI(title="Retail Forge AI - Image Service")
 
-# CORS
+# =====================================================
+# UPDATED CORS - PRODUCTION READY
+# =====================================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:5173",                      # Local frontend
+        "http://localhost:3000",                      # Local backend
+        "https://retail-forge-ai.vercel.app",         # YOUR Vercel frontend
+        "https://*.vercel.app",                       # All Vercel preview URLs
+        "https://retail-forge-backend.onrender.com",  # YOUR Render backend
+        "https://*.onrender.com"                      # All Render services
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,6 +53,7 @@ async def health_check():
         "status": "healthy",
         "service": "Image Processing Service (rembg)",
         "timestamp": datetime.utcnow().isoformat(),
+        "environment": os.getenv("NODE_ENV", "development"),
         "endpoints": [
             "/process/remove-background",
             "/process/extract-colors",
@@ -319,25 +329,32 @@ async def cleanup_temp_files():
 
 
 # -----------------------------------------------------------
-# UVICORN SERVER
+# MAIN FUNCTION - PRODUCTION READY
 # -----------------------------------------------------------
 
 if __name__ == "__main__":
+    # Get port from environment variable (Render sets this automatically)
     port = int(os.getenv("IMAGE_SERVICE_PORT", 8000))
+    
+    # Get environment
+    environment = os.getenv("NODE_ENV", "development")
+    is_production = environment == "production"
 
     print("=" * 60)
     print("🚀 Retail Forge AI - Image Processing Service")
     print("=" * 60)
     print(f"📍 Port: {port}")
+    print(f"🌍 Environment: {environment}")
     print(f"📁 Temp folders: temp/uploads, temp/processed")
-    print(f"🔗 Health: http://localhost:{port}/health")
+    print(f"🔗 Health: http://{'0.0.0.0' if is_production else 'localhost'}:{port}/health")
     print("⚡ Using lightweight rembg (no more SAM hangs!)")
     print("=" * 60)
 
     uvicorn.run(
         "image-service:app",
-        host="0.0.0.0",
+        host="0.0.0.0",        # ✅ CRITICAL: Must be 0.0.0.0 for Render
         port=port,
-        reload=True,
-        log_level="info"
+        reload=not is_production,  # ✅ Only reload in development
+        log_level="info",
+        access_log=True
     )
