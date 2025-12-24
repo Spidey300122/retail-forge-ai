@@ -22,20 +22,24 @@ from image_processing.background_generation import generate_background, save_gen
 
 load_dotenv()
 
-app = FastAPI(title="Retail Forge AI - Image Service")
+app = FastAPI(
+    title="Retail Forge AI - Image Service",
+    description="Image processing service with background removal, color extraction, and generation",
+    version="1.0.0"
+)
 
 # =====================================================
-# UPDATED CORS - PRODUCTION READY
+# CORS - PRODUCTION READY
 # =====================================================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",                      # Local frontend
-        "http://localhost:3000",                      # Local backend
-        "https://retail-forge-ai.vercel.app",         # YOUR Vercel frontend
-        "https://*.vercel.app",                       # All Vercel preview URLs
-        "https://retail-forge-backend.onrender.com",  # YOUR Render backend
-        "https://*.onrender.com"                      # All Render services
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://retail-forge-ai.vercel.app",
+        "https://*.vercel.app",
+        "https://retail-forge-backend.onrender.com",
+        "https://*.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -47,13 +51,24 @@ os.makedirs("temp/uploads", exist_ok=True)
 os.makedirs("temp/processed", exist_ok=True)
 
 
+@app.get("/")
+async def root():
+    """Root endpoint - redirects to health"""
+    return {
+        "message": "Retail Forge Image Service",
+        "health_check": "/health",
+        "docs": "/docs"
+    }
+
+
 @app.get("/health")
 async def health_check():
+    """Health check endpoint for Render"""
     return {
         "status": "healthy",
         "service": "Image Processing Service (rembg)",
         "timestamp": datetime.utcnow().isoformat(),
-        "environment": os.getenv("NODE_ENV", "development"),
+        "environment": os.getenv("RENDER", "local"),
         "endpoints": [
             "/process/remove-background",
             "/process/extract-colors",
@@ -65,13 +80,13 @@ async def health_check():
 
 
 # -----------------------------------------------------------
-# BACKGROUND REMOVAL (FIXED - NOW FAST!)
+# BACKGROUND REMOVAL
 # -----------------------------------------------------------
 
 @app.post("/process/remove-background")
 async def remove_bg_endpoint(
     file: UploadFile = File(...),
-    method: str = "fast"  # "standard" or "fast"
+    method: str = "fast"
 ):
     """Remove background from uploaded image using rembg."""
     start_time = time.time()
@@ -94,7 +109,7 @@ async def remove_bg_endpoint(
             os.remove(input_path)
             raise HTTPException(400, "File too large (max 10MB)")
 
-        # Process with rembg (much faster than SAM!)
+        # Process with rembg
         if method == "fast":
             print("⚡ Using fast background removal...")
             result = remove_background_fast(input_path, output_path)
@@ -106,7 +121,6 @@ async def remove_bg_endpoint(
             raise HTTPException(500, result["error"])
 
         processing_time = time.time() - start_time
-
         print(f"✅ Completed in {processing_time:.2f} seconds")
 
         return {
@@ -127,7 +141,6 @@ async def remove_bg_endpoint(
         print(f"❌ Error in remove_bg_endpoint: {e}")
         raise HTTPException(500, str(e))
     finally:
-        # Clean up input file
         if os.path.exists(input_path):
             try:
                 os.remove(input_path)
@@ -141,6 +154,7 @@ async def remove_bg_endpoint(
 
 @app.get("/process/download/{filename}")
 async def download_processed_file(filename: str):
+    """Download a processed file"""
     file_path = f"temp/processed/{filename}"
 
     if not os.path.exists(file_path):
@@ -175,7 +189,6 @@ async def extract_colors_endpoint(
         print(f"🎨 Extracting {count} colors from {file.filename}")
 
         result = extract_colors(input_path, count)
-
         os.remove(input_path)
 
         if not result["success"]:
@@ -215,7 +228,6 @@ async def optimize_endpoint(
         print(f"🗜️ Optimizing {file.filename} to {target_size_kb}KB")
 
         result = optimize_image(input_path, output_path, target_size_kb, format.upper())
-
         os.remove(input_path)
 
         if not result["success"]:
@@ -245,10 +257,7 @@ async def generate_background_endpoint(
     width: int = Form(1024),
     height: int = Form(1024)
 ):
-    """
-    Generate background using Stable Diffusion
-    Styles: professional, modern, minimal, vibrant, abstract, gradient, textured
-    """
+    """Generate background using Stable Diffusion"""
     start_time = time.time()
 
     try:
@@ -311,6 +320,7 @@ async def generate_background_endpoint(
 
 @app.on_event("startup")
 async def cleanup_temp_files():
+    """Cleanup old temporary files on startup"""
     print("🧹 Cleaning up temp files…")
 
     for folder in ["temp/uploads", "temp/processed"]:
@@ -329,32 +339,33 @@ async def cleanup_temp_files():
 
 
 # -----------------------------------------------------------
-# MAIN FUNCTION - PRODUCTION READY
+# MAIN FUNCTION - RENDER OPTIMIZED
 # -----------------------------------------------------------
 
 if __name__ == "__main__":
-    # Get port from environment variable (Render sets this automatically)
-    port = int(os.getenv("IMAGE_SERVICE_PORT", 8000))
+    # Render sets PORT automatically, fallback to 8000 for local dev
+    port = int(os.getenv("PORT", 8000))
     
-    # Get environment
-    environment = os.getenv("NODE_ENV", "development")
-    is_production = environment == "production"
-
-    print("=" * 60)
+    print("=" * 70)
     print("🚀 Retail Forge AI - Image Processing Service")
-    print("=" * 60)
+    print("=" * 70)
     print(f"📍 Port: {port}")
-    print(f"🌍 Environment: {environment}")
+    print(f"🔗 Binding to: 0.0.0.0:{port}")
+    print(f"🌍 Environment: {'Render' if os.getenv('RENDER') else 'Local'}")
     print(f"📁 Temp folders: temp/uploads, temp/processed")
-    print(f"🔗 Health: http://{'0.0.0.0' if is_production else 'localhost'}:{port}/health")
-    print("⚡ Using lightweight rembg (no more SAM hangs!)")
-    print("=" * 60)
+    print(f"⚡ Using lightweight rembg (fast background removal)")
+    print(f"🏥 Health check: http://0.0.0.0:{port}/health")
+    print(f"📚 API docs: http://0.0.0.0:{port}/docs")
+    print("=" * 70)
+    print("⏳ Starting server...")
+    print("")
 
     uvicorn.run(
-        "image-service:app",
-        host="0.0.0.0",        # ✅ CRITICAL: Must be 0.0.0.0 for Render
+        app,  # ✅ Pass app object directly
+        host="0.0.0.0",  # ✅ Required for Render
         port=port,
-        reload=not is_production,  # ✅ Only reload in development
+        reload=False,  # ✅ Must be False in production
         log_level="info",
-        access_log=True
+        access_log=True,
+        timeout_keep_alive=120
     )
