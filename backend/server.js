@@ -14,27 +14,6 @@ import validateRoutes from './api/routes/validate.js';
 import exportRoutes from './api/routes/export.js'; // <-- Added Day 15
 import completeAdRoutes from './api/routes/completeAd.js';
 // 
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import fs from 'fs';
-import path from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Create temp directories if they don't exist
-const tempDirs = [
-  path.join(__dirname, 'temp'),
-  path.join(__dirname, 'temp/uploads'),
-  path.join(__dirname, 'temp/processed')
-];
-
-tempDirs.forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    console.log(`✅ Created directory: ${dir}`);
-  }
-});
 dotenv.config();
 
 const app = express();

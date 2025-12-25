@@ -1,9 +1,3 @@
-"""
-Retail Forge AI - Image Processing Service
-Full production version with all features
-Using METHOD 1 (Direct app object) - Confirmed working on Render
-"""
-
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -15,36 +9,25 @@ import shutil
 import uuid
 import time
 
-# Import processing functions
+# Import our processing functions
 from image_processing.background_removal import (
     remove_background, 
     remove_background_fast
 )
 from image_processing.color_extraction import extract_colors
 from image_processing.optimization import optimize_image
+
+# Background generation imports
 from image_processing.background_generation import generate_background, save_generated_background
 
 load_dotenv()
 
-app = FastAPI(
-    title="Retail Forge AI - Image Service",
-    description="AI-powered image processing for retail media campaigns",
-    version="1.0.0"
-)
+app = FastAPI(title="Retail Forge AI - Image Service")
 
-# =====================================================
-# CORS - PRODUCTION READY
-# =====================================================
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://retail-forge-ai.vercel.app",
-        "https://*.vercel.app",
-        "https://retail-forge-backend.onrender.com",
-        "https://*.onrender.com"
-    ],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,62 +38,33 @@ os.makedirs("temp/uploads", exist_ok=True)
 os.makedirs("temp/processed", exist_ok=True)
 
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "service": "Retail Forge Image Processing",
-        "status": "running",
-        "version": "1.0.0",
-        "endpoints": {
-            "health": "/health",
-            "docs": "/docs",
-            "remove_bg": "/process/remove-background",
-            "extract_colors": "/process/extract-colors",
-            "optimize": "/process/optimize",
-            "generate_bg": "/process/generate-background"
-        }
-    }
-
-
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for Render"""
     return {
         "status": "healthy",
-        "service": "Image Processing Service",
+        "service": "Image Processing Service (rembg)",
         "timestamp": datetime.utcnow().isoformat(),
-        "environment": "production" if os.getenv("RENDER") else "development",
-        "features": [
-            "background_removal (rembg)",
-            "color_extraction",
-            "image_optimization",
-            "background_generation (Stability AI)"
-        ]
+        "endpoints": [
+            "/process/remove-background",
+            "/process/extract-colors",
+            "/process/optimize",
+            "/process/generate-background"
+        ],
+        "note": "Using lightweight rembg instead of SAM"
     }
 
 
 # -----------------------------------------------------------
-# BACKGROUND REMOVAL
+# BACKGROUND REMOVAL (FIXED - NOW FAST!)
 # -----------------------------------------------------------
 
 @app.post("/process/remove-background")
 async def remove_bg_endpoint(
     file: UploadFile = File(...),
-    method: str = "fast"
+    method: str = "fast"  # "standard" or "fast"
 ):
-    """
-    Remove background from uploaded image using rembg.
-    
-    Args:
-        file: Image file to process
-        method: "fast" or "standard" (fast is recommended)
-    
-    Returns:
-        JSON with download URL and metadata
-    """
+    """Remove background from uploaded image using rembg."""
     start_time = time.time()
-    input_path = None
 
     try:
         file_id = str(uuid.uuid4())
@@ -123,25 +77,27 @@ async def remove_bg_endpoint(
             shutil.copyfileobj(file.file, buffer)
 
         file_size = os.path.getsize(input_path)
-        print(f"📥 Received: {file.filename} ({file_size} bytes)")
+        print(f"📥 Received file: {file.filename} ({file_size} bytes)")
 
         # Check file size (max 10MB)
         if file_size > 10 * 1024 * 1024:
+            os.remove(input_path)
             raise HTTPException(400, "File too large (max 10MB)")
 
-        # Process with rembg
+        # Process with rembg (much faster than SAM!)
         if method == "fast":
-            print("⚡ Fast background removal...")
+            print("⚡ Using fast background removal...")
             result = remove_background_fast(input_path, output_path)
         else:
-            print("🎨 Standard background removal...")
+            print("🎨 Using standard background removal...")
             result = remove_background(input_path, output_path)
 
         if not result["success"]:
             raise HTTPException(500, result["error"])
 
         processing_time = time.time() - start_time
-        print(f"✅ Done in {processing_time:.2f}s")
+
+        print(f"✅ Completed in {processing_time:.2f} seconds")
 
         return {
             "success": True,
@@ -158,10 +114,11 @@ async def remove_bg_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error in remove_bg_endpoint: {e}")
         raise HTTPException(500, str(e))
     finally:
-        if input_path and os.path.exists(input_path):
+        # Clean up input file
+        if os.path.exists(input_path):
             try:
                 os.remove(input_path)
             except:
@@ -174,20 +131,16 @@ async def remove_bg_endpoint(
 
 @app.get("/process/download/{filename}")
 async def download_processed_file(filename: str):
-    """Download a processed file"""
     file_path = f"temp/processed/{filename}"
 
     if not os.path.exists(file_path):
-        raise HTTPException(404, "File not found or expired")
+        raise HTTPException(404, "File not found")
 
     return FileResponse(
         file_path,
         media_type="image/png",
         filename=filename,
-        headers={
-            "Cache-Control": "no-cache",
-            "Content-Disposition": f"attachment; filename={filename}"
-        }
+        headers={"Cache-Control": "no-cache"}
     )
 
 
@@ -200,18 +153,7 @@ async def extract_colors_endpoint(
     file: UploadFile = File(...),
     count: int = 5
 ):
-    """
-    Extract dominant colors from an image.
-    
-    Args:
-        file: Image file to analyze
-        count: Number of colors to extract (1-10)
-    
-    Returns:
-        JSON with color palette
-    """
-    input_path = None
-    
+    """Extract dominant colors from an image."""
     try:
         file_id = str(uuid.uuid4())
         input_ext = os.path.splitext(file.filename)[1] or ".jpg"
@@ -224,6 +166,8 @@ async def extract_colors_endpoint(
 
         result = extract_colors(input_path, count)
 
+        os.remove(input_path)
+
         if not result["success"]:
             raise HTTPException(500, result["error"])
 
@@ -234,12 +178,6 @@ async def extract_colors_endpoint(
     except Exception as e:
         print(f"❌ Error: {e}")
         raise HTTPException(500, str(e))
-    finally:
-        if input_path and os.path.exists(input_path):
-            try:
-                os.remove(input_path)
-            except:
-                pass
 
 
 # -----------------------------------------------------------
@@ -252,19 +190,7 @@ async def optimize_endpoint(
     target_size_kb: int = 500,
     format: str = "JPEG"
 ):
-    """
-    Optimize image to target file size.
-    
-    Args:
-        file: Image file to optimize
-        target_size_kb: Target size in KB (default: 500)
-        format: Output format - "JPEG" or "PNG"
-    
-    Returns:
-        JSON with download URL and optimization stats
-    """
-    input_path = None
-    
+    """Optimize image to target size."""
     try:
         file_id = str(uuid.uuid4())
         input_ext = os.path.splitext(file.filename)[1] or ".jpg"
@@ -276,9 +202,11 @@ async def optimize_endpoint(
         output_ext = ".jpg" if format.upper() == "JPEG" else ".png"
         output_path = f"temp/processed/{file_id}_opt{output_ext}"
 
-        print(f"🗜️ Optimizing to {target_size_kb}KB")
+        print(f"🗜️ Optimizing {file.filename} to {target_size_kb}KB")
 
         result = optimize_image(input_path, output_path, target_size_kb, format.upper())
+
+        os.remove(input_path)
 
         if not result["success"]:
             raise HTTPException(500, result["error"])
@@ -294,12 +222,6 @@ async def optimize_endpoint(
     except Exception as e:
         print(f"❌ Error: {e}")
         raise HTTPException(500, str(e))
-    finally:
-        if input_path and os.path.exists(input_path):
-            try:
-                os.remove(input_path)
-            except:
-                pass
 
 
 # -----------------------------------------------------------
@@ -314,16 +236,8 @@ async def generate_background_endpoint(
     height: int = Form(1024)
 ):
     """
-    Generate AI background using Stable Diffusion.
-    
-    Args:
-        prompt: Text description of desired background
-        style: Style preset (professional, modern, minimal, vibrant, abstract, gradient, textured)
-        width: Output width in pixels
-        height: Output height in pixels
-    
-    Returns:
-        JSON with download URL and generation metadata
+    Generate background using Stable Diffusion
+    Styles: professional, modern, minimal, vibrant, abstract, gradient, textured
     """
     start_time = time.time()
 
@@ -331,8 +245,10 @@ async def generate_background_endpoint(
         file_id = str(uuid.uuid4())
         output_path = f"temp/processed/{file_id}_background.jpg"
 
-        print(f"🎨 Generating: {prompt}")
-        print(f"   Style: {style} | Size: {width}x{height}")
+        print("🎨 Generating background…")
+        print(f"   Prompt: {prompt}")
+        print(f"   Style:  {style}")
+        print(f"   Size:   {width}x{height}")
 
         result = generate_background(
             prompt=prompt,
@@ -354,7 +270,8 @@ async def generate_background_endpoint(
         processing_time = time.time() - start_time
         file_size_kb = os.path.getsize(output_path) / 1024
 
-        print(f"✅ Done in {processing_time:.2f}s ({file_size_kb:.1f}KB)")
+        print(f"⏱️ Completed in {processing_time:.2f} seconds")
+        print(f"📦 File size: {file_size_kb:.1f} KB")
 
         return {
             "success": True,
@@ -374,7 +291,7 @@ async def generate_background_endpoint(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error in generate_background_endpoint: {e}")
         raise HTTPException(500, str(e))
 
 
@@ -384,12 +301,10 @@ async def generate_background_endpoint(
 
 @app.on_event("startup")
 async def cleanup_temp_files():
-    """Cleanup old temporary files on startup"""
-    print("🧹 Cleaning up old temp files...")
+    print("🧹 Cleaning up temp files…")
 
     for folder in ["temp/uploads", "temp/processed"]:
         if os.path.exists(folder):
-            cleaned = 0
             for filename in os.listdir(folder):
                 file_path = os.path.join(folder, filename)
 
@@ -398,43 +313,31 @@ async def cleanup_temp_files():
                     if time.time() - os.path.getmtime(file_path) > 3600:
                         try:
                             os.remove(file_path)
-                            cleaned += 1
+                            print(f"   🗑️ Deleted: {filename}")
                         except:
                             pass
-            
-            if cleaned > 0:
-                print(f"   🗑️ Cleaned {cleaned} file(s) from {folder}")
 
 
 # -----------------------------------------------------------
-# MAIN FUNCTION - METHOD 1 (CONFIRMED WORKING)
+# UVICORN SERVER
 # -----------------------------------------------------------
 
 if __name__ == "__main__":
-    # Render sets PORT automatically
-    port = int(os.getenv("PORT", 8000))
-    is_render = bool(os.getenv("RENDER"))
-    
-    print("=" * 70)
-    print("🚀 Retail Forge AI - Image Processing Service")
-    print("=" * 70)
-    print(f"📍 Port: {port}")
-    print(f"🌍 Environment: {'Render (Production)' if is_render else 'Local Development'}")
-    print(f"🔗 Binding to: 0.0.0.0:{port}")
-    print(f"📁 Temp storage: temp/uploads, temp/processed")
-    print(f"⚡ Features: Background removal, Color extraction, Optimization, AI generation")
-    print(f"🏥 Health: http://{'0.0.0.0' if is_render else 'localhost'}:{port}/health")
-    print(f"📚 Docs: http://{'0.0.0.0' if is_render else 'localhost'}:{port}/docs")
-    print("=" * 70)
-    print("⏳ Starting server with METHOD 1 (Direct app object)...")
-    print("")
+    port = int(os.getenv("IMAGE_SERVICE_PORT", 8000))
 
-    # METHOD 1: Direct app object (CONFIRMED WORKING)
+    print("=" * 60)
+    print("🚀 Retail Forge AI - Image Processing Service")
+    print("=" * 60)
+    print(f"📍 Port: {port}")
+    print(f"📁 Temp folders: temp/uploads, temp/processed")
+    print(f"🔗 Health: http://localhost:{port}/health")
+    print("⚡ Using lightweight rembg (no more SAM hangs!)")
+    print("=" * 60)
+
     uvicorn.run(
-        app,                    # ✅ Direct object reference
-        host="0.0.0.0",        # ✅ Required for Render
-        port=port,             # ✅ Uses PORT env variable
-        log_level="info",
-        access_log=True,
-        timeout_keep_alive=120
+        "image-service:app",
+        host="0.0.0.0",
+        port=port,
+        reload=True,
+        log_level="info"
     )

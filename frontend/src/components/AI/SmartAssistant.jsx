@@ -1,4 +1,4 @@
-// frontend/src/components/AI/SmartAssistant.jsx zzz- ALL ESLINT WARNINGS FIXED
+// frontend/src/components/AI/SmartAssistant.jsx - ALL ESLINT WARNINGS FIXED
 import { useState, useEffect, useCallback } from 'react';
 import { Sparkles, Loader, CheckCircle, AlertCircle, Info, Wand2, Zap } from 'lucide-react';
 import useAIStore from '../../store/aiStore';

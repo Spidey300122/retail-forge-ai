@@ -9,7 +9,6 @@ import useCanvasStore from '../../store/canvasStore';
 import toast from 'react-hot-toast';
 import CropTool from './CropTool';
 import './ImageControls.css';
-const IMAGE_SERVICE_URL = import.meta.env.VITE_IMAGE_SERVICE_URL || 'http://localhost:8000';
 
 function ImageControls() {
   const { canvas, saveState } = useCanvasStore();
@@ -281,7 +280,7 @@ function ImageControls() {
       formData.append('file', blob, 'image.jpg');
       formData.append('count', 5);
 
-      const result = await fetch(`${IMAGE_SERVICE_URL}/process/extract-colors`, {
+      const result = await fetch('http://localhost:8000/process/extract-colors', {
         method: 'POST',
         body: formData,
       });
@@ -371,7 +370,7 @@ function ImageControls() {
         }
       }, 5000);
 
-      const result = await fetch(`${IMAGE_SERVICE_URL}/process/remove-background`, {
+      const result = await fetch('http://localhost:8000/process/remove-background', {
         method: 'POST',
         body: formData,
       });
@@ -382,7 +381,7 @@ function ImageControls() {
         setProcessingStage('Applying result...');
         toast.loading('Applying result...', { id: loadingToast });
         
-        const downloadUrl = `${IMAGE_SERVICE_URL}${data.download_url}`;
+        const downloadUrl = `http://localhost:8000${data.download_url}`;
         
         fabric.Image.fromURL(downloadUrl, (newImg) => {
           newImg.set({
