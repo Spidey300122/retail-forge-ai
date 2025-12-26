@@ -12,8 +12,6 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
       category: 'General', 
       items: [
         { keys: ['?'], description: 'Show keyboard shortcuts' },
-        { keys: ['Ctrl', 'S'], description: 'Save current design' },
-        { keys: ['Ctrl', 'E'], description: 'Export creative' },
         { keys: ['Esc'], description: 'Deselect all / Close modal' }
       ]
     },
@@ -22,12 +20,9 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
       items: [
         { keys: ['Ctrl', 'Z'], description: 'Undo' },
         { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo' },
-        { keys: ['Ctrl', 'Y'], description: 'Redo (Windows alternative)' },
         { keys: ['Ctrl', 'C'], description: 'Copy selected object' },
         { keys: ['Ctrl', 'V'], description: 'Paste' },
-        { keys: ['Del'], description: 'Delete selected object' },
-        { keys: ['Backspace'], description: 'Delete selected object (alternative)' },
-        { keys: ['Ctrl', 'A'], description: 'Select all objects' }
+        { keys: ['Del'], description: 'Delete selected object' }
       ]
     },
     { 
@@ -35,9 +30,6 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
       items: [
         { keys: ['↑', '↓', '←', '→'], description: 'Move object (1px)' },
         { keys: ['Shift', '↑↓←→'], description: 'Move object (10px)' },
-        { keys: ['Ctrl', '+'], description: 'Zoom in' },
-        { keys: ['Ctrl', '-'], description: 'Zoom out' },
-        { keys: ['Ctrl', '0'], description: 'Reset zoom to 100%' },
         { keys: ['Scroll'], description: 'Zoom in/out' },
         { keys: ['Alt', 'Drag'], description: 'Pan canvas' },
         { keys: ['Cmd', 'Drag'], description: 'Pan canvas (Mac)' }
@@ -47,9 +39,7 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
       category: 'Layers', 
       items: [
         { keys: ['Ctrl', '['], description: 'Send backward' },
-        { keys: ['Ctrl', ']'], description: 'Bring forward' },
-        { keys: ['Ctrl', 'Shift', '['], description: 'Send to back' },
-        { keys: ['Ctrl', 'Shift', ']'], description: 'Bring to front' }
+        { keys: ['Ctrl', ']'], description: 'Bring forward' }
       ]
     }
   ];
@@ -249,8 +239,8 @@ const useKeyboardShortcuts = () => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       const activeObject = canvas.getActiveObject();
 
-      // Delete: Remove selected object
-      if ((e.key === 'Delete' || e.key === 'Backspace') && activeObject) {
+      // Delete: Remove selected object (Delete only, Backspace removed)
+      if (e.key === 'Delete' && activeObject) {
         e.preventDefault();
         canvas.remove(activeObject);
         canvas.renderAll();
@@ -258,15 +248,7 @@ const useKeyboardShortcuts = () => {
         return;
       }
 
-      // Ctrl/Cmd + A: Select all
-      if (isCtrlOrCmd && e.key === 'a') {
-        e.preventDefault();
-        const objects = canvas.getObjects();
-        const selection = new fabric.ActiveSelection(objects, { canvas });
-        canvas.setActiveObject(selection);
-        canvas.renderAll();
-        return;
-      }
+      // REMOVED: Ctrl/Cmd + A: Select all
 
       // Ctrl/Cmd + C: Copy
       if (isCtrlOrCmd && e.key === 'c' && activeObject) {
@@ -343,28 +325,6 @@ const useKeyboardShortcuts = () => {
         e.preventDefault();
         canvas.bringForward(activeObject);
         canvas.renderAll();
-        return;
-      }
-
-      // Zoom controls
-      if (isCtrlOrCmd && e.key === '+') {
-        e.preventDefault();
-        const zoom = canvas.getZoom();
-        canvas.setZoom(Math.min(zoom * 1.1, 3));
-        return;
-      }
-
-      if (isCtrlOrCmd && (e.key === '-' || e.key === '_')) {
-        e.preventDefault();
-        const zoom = canvas.getZoom();
-        canvas.setZoom(Math.max(zoom * 0.9, 0.1));
-        return;
-      }
-
-      if (isCtrlOrCmd && e.key === '0') {
-        e.preventDefault();
-        canvas.setZoom(1);
-        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
         return;
       }
     };

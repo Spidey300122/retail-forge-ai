@@ -37,18 +37,13 @@ function useKeyboard() {
         return;
       }
 
-      // Redo: Ctrl+Y (Windows alternative)
-      if (e.ctrlKey && e.key === 'y') {
-        e.preventDefault();
-        redo();
-        return;
-      }
+      // REMOVED: Redo: Ctrl+Y (Windows alternative)
 
       // REMOVED: Zoom controls (Ctrl +, Ctrl -, Ctrl 0)
       // These were interfering with browser zoom
 
-      // Delete: Delete or Backspace (only when canvas object is selected)
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      // Delete: Delete only (Backspace removed)
+      if (e.key === 'Delete') {
         if (!canvas) return;
         
         const activeObject = canvas.getActiveObject();
@@ -62,23 +57,7 @@ function useKeyboard() {
         return;
       }
 
-      // Select All: Ctrl+A or Cmd+A
-      if (isCtrlOrCmd && e.key === 'a') {
-        e.preventDefault();
-        if (!canvas) return;
-        
-        const objects = canvas.getObjects();
-        if (objects.length === 0) return;
-        
-        canvas.discardActiveObject();
-        const sel = new fabric.ActiveSelection(objects, {
-          canvas: canvas,
-        });
-        canvas.setActiveObject(sel);
-        canvas.requestRenderAll();
-        console.log(`✅ Selected ${objects.length} objects`);
-        return;
-      }
+      // REMOVED: Select All: Ctrl+A or Cmd+A
 
       // Copy: Ctrl+C or Cmd+C
       if (isCtrlOrCmd && e.key === 'c') {
