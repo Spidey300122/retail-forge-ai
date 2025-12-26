@@ -1,8 +1,6 @@
-// SmartAssistant.jsx - FULLY FIXED LEP LAYOUT
-// Critical fixes:
-// 1. LEP logo positioned to RIGHT of ALL packshots (calculated from rightmost edge)
-// 2. ALL text LEFT-ALIGNED for LEP (headline + tagline lines)
-// 3. Non-LEP remains unchanged with centered text
+// SmartAssistant.jsx - COMPLETE FILE WITH LEP TEXT
+// LEP: Simple blue "LEP" text to the right of all packshots (no logo image used)
+// Non-LEP: Logo at top-left
 
 import { useState, useCallback } from 'react';
 import { Sparkles, Loader, CheckCircle, AlertCircle, Wand2 } from 'lucide-react';
@@ -326,24 +324,29 @@ function SmartAssistant() {
       });
     }
     
-    // POSITION LOGO
-    if (isLEP && logos.length > 0) {
-      const logo = logos[0];
-      const logoScale = 100 / Math.max(logo.width, logo.height);
+    // POSITION LOGO OR LEP TEXT
+    if (isLEP) {
+      // For LEP: Add simple blue "LEP" text to the right of packshots
       const logoOffset = 60;
-      
-      logo.set({
+      const lepText = new fabric.Text('LEP', {
         left: packshotRightEdge + logoOffset,
         top: H / 2,
-        scaleX: logoScale,
-        scaleY: logoScale,
         originX: 'left',
         originY: 'center',
-        shadow: null
+        fontSize: 80,
+        fontWeight: 'bold',
+        fill: '#00539F', // Tesco blue
+        fontFamily: 'Arial Black, Impact',
+        shadow: null,
+        stroke: null,
+        strokeWidth: 0
       });
-      canvas.bringToFront(logo);
-      console.log(`✅ LEP Logo: x=${Math.round(packshotRightEdge + logoOffset)} (RIGHT of ALL packshots)`);
+      
+      canvas.add(lepText);
+      canvas.bringToFront(lepText);
+      console.log(`✅ LEP Text: x=${Math.round(packshotRightEdge + logoOffset)} (RIGHT of ALL packshots)`);
     } else if (!isLEP && logos.length > 0) {
+      // Non-LEP: Use uploaded logo at top-left
       const logo = logos[0];
       const logoScale = 100 / Math.max(logo.width, logo.height);
       logo.set({
@@ -445,7 +448,7 @@ function SmartAssistant() {
       });
     }
 
-    // Price, CTA, Tags (unchanged from original)
+    // Price, CTA, Tags
     if (productInfo.price) {
       const priceBg = new fabric.Rect({
         left: 110,
@@ -621,7 +624,7 @@ function SmartAssistant() {
           { type: 'success', message: `✨ ${brandName} ad created!` },
           { type: 'success', message: '🔪 Backgrounds removed' },
           ...(isLEP ? [
-            { type: 'success', message: '🏷️ LEP logo: RIGHT of ALL packshots' },
+            { type: 'success', message: '🏷️ LEP text: RIGHT of ALL packshots' },
             { type: 'success', message: '📝 ALL text: LEFT-ALIGNED' },
             { type: 'success', message: '✂️ Tagline split, left-aligned' }
           ] : [
@@ -652,7 +655,7 @@ function SmartAssistant() {
           AI Smart Assistant
         </h3>
         <p style={{ fontSize: '13px', color: '#6b7280' }}>
-          LEP: Left-aligned text · Logo right of packshots<br/>Non-LEP: Centered text · Top-left logo
+          LEP: Left-aligned text · LEP text right of packshots<br/>Non-LEP: Centered text · Top-left logo
         </p>
       </div>
 
