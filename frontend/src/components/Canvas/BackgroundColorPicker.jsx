@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Pipette, Check } from 'lucide-react';
+import { Pipette, Check, Bold, Italic } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useCanvasStore from '../../store/canvasStore';
 
@@ -113,6 +113,42 @@ function BackgroundColorPicker({ extractedColors = [] }) {
     toast.success(`Text color changed to ${selectedColor}`);
   };
 
+  const handleToggleBold = () => {
+    const canvasInstance = useCanvasStore.getState().canvas;
+    const activeObject = canvasInstance?.getActiveObject();
+
+    if (!activeObject || (activeObject.type !== 'i-text' && activeObject.type !== 'text')) {
+      toast.error('Please select a text element first');
+      return;
+    }
+
+    const currentWeight = activeObject.fontWeight;
+    const newWeight = currentWeight === 'bold' ? 'normal' : 'bold';
+    
+    activeObject.set('fontWeight', newWeight);
+    canvasInstance.renderAll();
+    canvasInstance.fire('object:modified');
+    toast.success(`Text ${newWeight === 'bold' ? 'bolded' : 'unbolded'}`);
+  };
+
+  const handleToggleItalic = () => {
+    const canvasInstance = useCanvasStore.getState().canvas;
+    const activeObject = canvasInstance?.getActiveObject();
+
+    if (!activeObject || (activeObject.type !== 'i-text' && activeObject.type !== 'text')) {
+      toast.error('Please select a text element first');
+      return;
+    }
+
+    const currentStyle = activeObject.fontStyle;
+    const newStyle = currentStyle === 'italic' ? 'normal' : 'italic';
+    
+    activeObject.set('fontStyle', newStyle);
+    canvasInstance.renderAll();
+    canvasInstance.fire('object:modified');
+    toast.success(`Text ${newStyle === 'italic' ? 'italicized' : 'un-italicized'}`);
+  };
+
   const renderColorSwatches = (colors) => {
     if (!colors || colors.length === 0) {
       return <div className="text-gray-400 text-xs italic">No colors available</div>;
@@ -194,7 +230,7 @@ function BackgroundColorPicker({ extractedColors = [] }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-2 pt-2">
+      <div className="flex flex-col gap-2 pt-2 border-t border-gray-200">
         <button
           onClick={() => handleApplyColor()}
           className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
@@ -208,6 +244,37 @@ function BackgroundColorPicker({ extractedColors = [] }) {
         >
           Apply to Selected Text
         </button>
+      </div>
+
+      {/* NEW: Text Formatting Section */}
+      <div className="pt-4 border-t border-gray-200">
+        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 block">
+          Text Formatting
+        </label>
+        
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleToggleBold}
+            className="py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-sm font-medium rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 flex items-center justify-center gap-2"
+            title="Toggle Bold (Ctrl+B)"
+          >
+            <Bold size={16} />
+            <span className="font-bold">Bold</span>
+          </button>
+          
+          <button
+            onClick={handleToggleItalic}
+            className="py-2.5 px-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-sm font-medium rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 flex items-center justify-center gap-2"
+            title="Toggle Italic (Ctrl+I)"
+          >
+            <Italic size={16} />
+            <span className="italic">Italic</span>
+          </button>
+        </div>
+        
+        <p className="text-xs text-gray-500 mt-2 italic">
+          Select a text element, then click Bold or Italic to toggle formatting
+        </p>
       </div>
     </div>
   );

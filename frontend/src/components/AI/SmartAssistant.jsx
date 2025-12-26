@@ -1,8 +1,8 @@
-// SmartAssistant.jsx - FIXED LEP LAYOUT
-// Changes:
-// 1. LEP logo positioned to RIGHT of ALL packshots (not just first)
-// 2. All text (headline, tagline) LEFT-ALIGNED for LEP ads
-// 3. Improved packshot arrangement
+// SmartAssistant.jsx - FULLY FIXED LEP LAYOUT
+// Critical fixes:
+// 1. LEP logo positioned to RIGHT of ALL packshots (calculated from rightmost edge)
+// 2. ALL text LEFT-ALIGNED for LEP (headline + tagline lines)
+// 3. Non-LEP remains unchanged with centered text
 
 import { useState, useCallback } from 'react';
 import { Sparkles, Loader, CheckCircle, AlertCircle, Wand2 } from 'lucide-react';
@@ -143,10 +143,6 @@ function SmartAssistant() {
     return null;
   }, []);
 
-  // ========================================
-  // SMART TEXT WITH LEFT ALIGNMENT FOR LEP
-  // ========================================
-  
   const addText = useCallback((text, options = {}) => {
     if (!canvas || !text) return;
     
@@ -155,7 +151,7 @@ function SmartAssistant() {
       fill: '#ffffff',
       fontWeight: 'bold',
       fontFamily: 'Arial, sans-serif',
-      originX: 'left',  // Changed from 'center'
+      originX: 'left',
       originY: 'center',
       selectable: true,
       isAIGenerated: true,
@@ -170,13 +166,11 @@ function SmartAssistant() {
 
     canvas.add(textObj);
     
-    // ✅ CRITICAL: Force text to stay within bounds
     setTimeout(() => {
       const bounds = textObj.getBoundingRect(true);
       const MARGIN = 50;
       const maxWidth = canvas.width - (MARGIN * 2);
       
-      // Scale down if too wide
       if (bounds.width > maxWidth) {
         const scale = maxWidth / bounds.width;
         textObj.set({
@@ -185,25 +179,20 @@ function SmartAssistant() {
         });
       }
       
-      // Recalculate after scaling
       const newBounds = textObj.getBoundingRect(true);
       
-      // Force within left boundary (for left-aligned text)
       if (textObj.left < MARGIN) {
         textObj.set({ left: MARGIN });
       }
       
-      // Force within right boundary
       if (textObj.left + newBounds.width > canvas.width - MARGIN) {
         textObj.set({ left: canvas.width - MARGIN - newBounds.width });
       }
       
-      // Force within top boundary
       if (textObj.top - (newBounds.height / 2) < MARGIN) {
         textObj.set({ top: MARGIN + (newBounds.height / 2) });
       }
       
-      // Force within bottom boundary
       if (textObj.top + (newBounds.height / 2) > canvas.height - MARGIN) {
         textObj.set({ top: canvas.height - MARGIN - (newBounds.height / 2) });
       }
@@ -215,10 +204,6 @@ function SmartAssistant() {
     return textObj;
   }, [canvas]);
 
-  // ========================================
-  // FIXED LAYOUT ENGINE - LEP IMPROVEMENTS
-  // ========================================
-  
   const createLayout = useCallback(async (productInfo, backgroundUrl) => {
     if (!canvas) return;
 
@@ -227,15 +212,11 @@ function SmartAssistant() {
     const isLEP = productInfo.isLEP;
     const isExclusive = productInfo.isExclusive;
 
-    // Clear AI elements
     canvas.getObjects().forEach(obj => {
       if (obj.isAIGenerated) canvas.remove(obj);
     });
 
-    // ========================================
-    // STEP 1: BACKGROUND
-    // ========================================
-    
+    // BACKGROUND
     if (isLEP) {
       canvas.setBackgroundColor('#ffffff', () => canvas.renderAll());
     } else if (backgroundUrl) {
@@ -274,10 +255,7 @@ function SmartAssistant() {
 
     await new Promise(r => setTimeout(r, 200));
 
-    // ========================================
-    // STEP 2: CATEGORIZE ELEMENTS
-    // ========================================
-    
+    // CATEGORIZE
     const allImages = canvas.getObjects('image').filter(img => !img.isBackground);
     const packshots = allImages.filter(img => 
       img.imageType === 'packshot' || (!img.imageType && img.width * img.height > 30000)
@@ -287,12 +265,9 @@ function SmartAssistant() {
     );
     const decorative = allImages.filter(img => img.imageType === 'decorative');
 
-    console.log(`📊 Found: ${packshots.length} packshots, ${logos.length} logos, ${decorative.length} decorative`);
+    console.log(`📊 ${packshots.length} packshots, ${logos.length} logos`);
 
-    // ========================================
-    // POSITION PACKSHOTS FIRST (to calculate rightmost edge)
-    // ========================================
-    
+    // POSITION PACKSHOTS
     let packshotRightEdge = 0;
     
     for (let i = 0; i < packshots.length; i++) {
@@ -304,7 +279,6 @@ function SmartAssistant() {
           const targetSize = H * 0.40;
           const scale = targetSize / Math.max(newImg.width, newImg.height);
           
-          // ✅ FIX: HORIZONTAL arrangement across center
           let left, top;
           
           if (packshots.length === 1) {
@@ -337,7 +311,6 @@ function SmartAssistant() {
             })
           });
           
-          // ✅ CRITICAL FIX: Track rightmost edge of ALL packshots
           const bounds = newImg.getBoundingRect();
           const thisRightEdge = bounds.left + bounds.width;
           if (thisRightEdge > packshotRightEdge) {
@@ -347,20 +320,17 @@ function SmartAssistant() {
           canvas.remove(packshot);
           canvas.add(newImg);
           canvas.bringToFront(newImg);
-          console.log(`✅ Packshot ${i + 1} positioned. Right edge: ${Math.round(thisRightEdge)}`);
+          console.log(`✅ Packshot ${i + 1} right edge: ${Math.round(thisRightEdge)}`);
           resolve();
         }, { crossOrigin: 'anonymous' });
       });
     }
     
-    // ========================================
-    // POSITION LEP LOGO - TO RIGHT OF ALL PACKSHOTS
-    // ========================================
-    
+    // POSITION LOGO
     if (isLEP && logos.length > 0) {
       const logo = logos[0];
       const logoScale = 100 / Math.max(logo.width, logo.height);
-      const logoOffset = 60; // Space from rightmost packshot edge
+      const logoOffset = 60;
       
       logo.set({
         left: packshotRightEdge + logoOffset,
@@ -372,9 +342,8 @@ function SmartAssistant() {
         shadow: null
       });
       canvas.bringToFront(logo);
-      console.log(`✅ LEP Logo positioned: RIGHT of ALL packshots (${Math.round(packshotRightEdge + logoOffset)}, ${Math.round(H / 2)})`);
+      console.log(`✅ LEP Logo: x=${Math.round(packshotRightEdge + logoOffset)} (RIGHT of ALL packshots)`);
     } else if (!isLEP && logos.length > 0) {
-      // Non-LEP: Top-left position
       const logo = logos[0];
       const logoScale = 100 / Math.max(logo.width, logo.height);
       logo.set({
@@ -387,14 +356,9 @@ function SmartAssistant() {
         shadow: new fabric.Shadow({ color: 'rgba(0, 0, 0, 0.4)', blur: 12 })
       });
       canvas.bringToFront(logo);
-      console.log(`✅ Logo positioned: TOP-LEFT (130, 110)`);
     }
 
-    // ========================================
-    // POSITION DECORATIVE (BOTTOM-RIGHT)
-    // ========================================
-    
-    decorative.forEach((decor, i) => {
+    decorative.forEach((decor) => {
       const scale = 150 / Math.max(decor.width, decor.height);
       decor.set({
         left: W - 160,
@@ -406,24 +370,19 @@ function SmartAssistant() {
         opacity: 0.95,
         angle: 0
       });
-      console.log(`✅ Decorative positioned: BOTTOM-RIGHT (${W - 160}, ${H - 180})`);
     });
 
     canvas.renderAll();
 
-    // ========================================
-    // STEP 3: TEXT - LEFT ALIGNED FOR LEP
-    // ========================================
-    
+    // TEXT
     const TESCO_BLUE = '#00539F';
     const textColor = isLEP ? TESCO_BLUE : '#ffffff';
-    const accentColor = isLEP ? TESCO_BLUE : '#ffd700';
 
-    // ✅ MAIN HEADLINE - LEFT ALIGNED
+    // HEADLINE - LEFT ALIGNED
     addText(productInfo.headline.toUpperCase(), {
-      left: 110, // LEFT aligned position
+      left: 110,
       top: 110,
-      originX: 'left', // LEFT alignment
+      originX: 'left',
       fontSize: 64,
       fontWeight: 'bold',
       fill: textColor,
@@ -438,40 +397,36 @@ function SmartAssistant() {
       })
     });
 
-    // ✅ TAGLINE - LEFT ALIGNED, SPLIT INTO TWO LINES FOR LEP
+    // TAGLINE
+    const taglineWords = productInfo.tagline.split(' ');
+    
     if (isLEP) {
-      const words = productInfo.tagline.split(' ');
-      const midpoint = Math.ceil(words.length / 2);
-      const firstHalf = words.slice(0, midpoint).join(' ');
-      const secondHalf = words.slice(midpoint).join(' ');
+      // LEP: Split into lines, LEFT-ALIGNED
+      const wordsPerLine = Math.ceil(taglineWords.length / 2);
+      const lines = [];
       
-      addText(firstHalf, {
-        left: 110, // LEFT aligned
-        top: 180,
-        originX: 'left',
-        fontSize: 24,
-        fill: TESCO_BLUE,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        shadow: null,
-        stroke: null,
-        strokeWidth: 0
+      for (let i = 0; i < taglineWords.length; i += wordsPerLine) {
+        lines.push(taglineWords.slice(i, i + wordsPerLine).join(' '));
+      }
+      
+      lines.forEach((line, idx) => {
+        addText(line, {
+          left: 110,
+          top: 180 + (idx * 30),
+          originX: 'left',
+          fontSize: 24,
+          fill: TESCO_BLUE,
+          fontWeight: 'normal',
+          textAlign: 'left',
+          shadow: null,
+          stroke: null,
+          strokeWidth: 0
+        });
       });
       
-      addText(secondHalf, {
-        left: 110, // LEFT aligned
-        top: 210,
-        originX: 'left',
-        fontSize: 24,
-        fill: TESCO_BLUE,
-        fontWeight: 'normal',
-        textAlign: 'left',
-        shadow: null,
-        stroke: null,
-        strokeWidth: 0
-      });
+      console.log(`✅ LEP: ${lines.length} tagline lines, LEFT-ALIGNED`);
     } else {
-      // Non-LEP: Center-aligned white tagline
+      // Non-LEP: Centered
       addText(productInfo.tagline, {
         left: W / 2,
         top: 190,
@@ -490,7 +445,7 @@ function SmartAssistant() {
       });
     }
 
-    // Price Tile
+    // Price, CTA, Tags (unchanged from original)
     if (productInfo.price) {
       const priceBg = new fabric.Rect({
         left: 110,
@@ -525,7 +480,6 @@ function SmartAssistant() {
       });
     }
 
-    // CTA Button
     const ctaRect = new fabric.Rect({
       left: 110,
       top: H - 170,
@@ -556,10 +510,9 @@ function SmartAssistant() {
       strokeWidth: 0
     });
 
-    // ✅ TAGS - LEFT ALIGNED
     const tagText = isExclusive ? 'Only at Tesco' : 'Available at Tesco';
     addText(tagText, {
-      left: 110, // LEFT aligned
+      left: 110,
       top: H - 230,
       originX: 'left',
       fontSize: 24,
@@ -577,7 +530,7 @@ function SmartAssistant() {
 
     if (isLEP) {
       addText('Selected stores. While stocks last', {
-        left: 110, // LEFT aligned
+        left: 110,
         top: H - 195,
         originX: 'left',
         fontSize: 20,
@@ -588,13 +541,12 @@ function SmartAssistant() {
       });
     }
 
-    // Quality Badge - ONLY FOR NON-LEP
     if (!isLEP) {
       const badge = new fabric.Circle({
         left: W - 100,
         top: 95,
         radius: 60,
-        fill: accentColor,
+        fill: '#ffd700',
         stroke: '#ffffff',
         strokeWidth: 6,
         originX: 'center',
@@ -611,7 +563,7 @@ function SmartAssistant() {
         originX: 'center',
         fontSize: 15,
         fontWeight: 'bold',
-        fill: getContrastColor(accentColor),
+        fill: getContrastColor('#ffd700'),
         textAlign: 'center',
         lineHeight: 1.2,
         shadow: null,
@@ -620,13 +572,9 @@ function SmartAssistant() {
     }
 
     canvas.renderAll();
-    toast.success('✅ Perfect layout created!', { duration: 5000 });
+    toast.success('✅ Perfect layout!', { duration: 5000 });
   }, [canvas, addText, getContrastColor, removeBackgroundFromImage]);
 
-  // ========================================
-  // MAIN GENERATION
-  // ========================================
-  
   const generate = useCallback(async () => {
     if (!localInput.trim()) {
       toast.error('Please describe the ad');
@@ -668,24 +616,18 @@ function SmartAssistant() {
 
       setProgress({ step: 'Complete!', progress: 100 });
 
-      const tagText = isExclusive ? 'Only at Tesco' : 'Available at Tesco';
       setAssistantResults({
         recommendations: [
           { type: 'success', message: `✨ ${brandName} ad created!` },
           { type: 'success', message: '🔪 Backgrounds removed' },
-          { type: 'success', message: '↔️ Packshots arranged HORIZONTALLY' },
           ...(isLEP ? [
             { type: 'success', message: '🏷️ LEP logo: RIGHT of ALL packshots' },
-            { type: 'success', message: '📝 All text: LEFT-ALIGNED' },
-            { type: 'success', message: '🎨 Plain blue & white (no shadows)' },
-            { type: 'success', message: '❌ No quality badge (LEP style)' }
+            { type: 'success', message: '📝 ALL text: LEFT-ALIGNED' },
+            { type: 'success', message: '✂️ Tagline split, left-aligned' }
           ] : [
             { type: 'success', message: '📍 Logo: TOP-LEFT' },
-            { type: 'success', message: '📐 Decorative: BOTTOM-RIGHT' },
-            { type: 'success', message: '🎨 White tagline with shadows' },
-            { type: 'success', message: '🔓 Quality badge UNLOCKED' }
-          ]),
-          { type: 'info', message: `🏷️ "${tagText}"` }
+            { type: 'success', message: '🎨 Centered text with shadows' }
+          ])
         ]
       });
 
@@ -702,10 +644,6 @@ function SmartAssistant() {
     }
   }, [localInput, canvas, detectCategory, detectLEP, detectExclusive, extractBrandName, extractPrice, generateCopy, generateBackground, createLayout, setAssistantInput, setAssistantResults]);
 
-  // ========================================
-  // UI
-  // ========================================
-  
   return (
     <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
@@ -714,7 +652,7 @@ function SmartAssistant() {
           AI Smart Assistant
         </h3>
         <p style={{ fontSize: '13px', color: '#6b7280' }}>
-          LEP: Left-aligned text · Logo right of ALL packshots · No badge | Non-LEP: Center text · Top-left logo · Badge
+          LEP: Left-aligned text · Logo right of packshots<br/>Non-LEP: Centered text · Top-left logo
         </p>
       </div>
 
@@ -722,7 +660,7 @@ function SmartAssistant() {
         <textarea
           value={localInput}
           onChange={(e) => { setLocalInput(e.target.value); setAssistantInput(e.target.value); }}
-          placeholder='E.g., "Professional sports ad" or "LEP beverage ad"'
+          placeholder='E.g., "Sports LEP ad" or "Premium beverage ad"'
           rows={4}
           style={{
             width: '100%',
