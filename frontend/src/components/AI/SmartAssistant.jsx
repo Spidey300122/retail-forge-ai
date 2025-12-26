@@ -232,6 +232,7 @@ function SmartAssistant() {
     // ========================================
     
     if (isLEP) {
+      // Plain white background for LEP
       canvas.setBackgroundColor('#ffffff', () => canvas.renderAll());
     } else if (backgroundUrl) {
       await new Promise(resolve => {
@@ -285,27 +286,44 @@ function SmartAssistant() {
     console.log(`📊 Found: ${packshots.length} packshots, ${logos.length} logos, ${decorative.length} decorative`);
 
     // ========================================
-    // POSITION 1: LOGO (Top-left)
+    // POSITION 1: LOGO
     // ========================================
     
     if (logos.length > 0) {
       const logo = logos[0];
       const logoScale = 100 / Math.max(logo.width, logo.height);
-      logo.set({
-        left: 130,
-        top: 110,
-        scaleX: logoScale,
-        scaleY: logoScale,
-        originX: 'center',
-        originY: 'center',
-        shadow: new fabric.Shadow({ color: 'rgba(0, 0, 0, 0.4)', blur: 12 })
-      });
-      canvas.bringToFront(logo);
+      
+      if (isLEP) {
+        // For LEP: Position logo to the RIGHT of packshot (will be set after packshot positioning)
+        logo.lepLogo = true; // Mark for later positioning
+        logo.set({
+          scaleX: logoScale,
+          scaleY: logoScale,
+          originX: 'center',
+          originY: 'center',
+          shadow: null // No shadow for LEP
+        });
+      } else {
+        // For non-LEP: Top-left position
+        logo.set({
+          left: 130,
+          top: 110,
+          scaleX: logoScale,
+          scaleY: logoScale,
+          originX: 'center',
+          originY: 'center',
+          shadow: new fabric.Shadow({ color: 'rgba(0, 0, 0, 0.4)', blur: 12 })
+        });
+        canvas.bringToFront(logo);
+        console.log(`✅ Logo positioned: TOP-LEFT (130, 110)`);
+      }
     }
 
     // ========================================
     // POSITION 2: PACKSHOTS (HORIZONTAL CENTER)
     // ========================================
+    
+    let packshotRightEdge = 0; // Track rightmost edge for LEP logo placement
     
     for (let i = 0; i < packshots.length; i++) {
       const packshot = packshots[i];
@@ -344,13 +362,19 @@ function SmartAssistant() {
             originX: 'center',
             originY: 'center',
             angle: 0,
-            shadow: new fabric.Shadow({
+            shadow: isLEP ? null : new fabric.Shadow({
               color: 'rgba(0, 0, 0, 0.6)',
               blur: 22,
               offsetX: 10,
               offsetY: 10
             })
           });
+          
+          // Track rightmost edge for LEP logo
+          const bounds = newImg.getBoundingRect();
+          if (bounds.left + bounds.width > packshotRightEdge) {
+            packshotRightEdge = bounds.left + bounds.width;
+          }
           
           canvas.remove(packshot);
           canvas.add(newImg);
@@ -360,9 +384,23 @@ function SmartAssistant() {
         }, { crossOrigin: 'anonymous' });
       });
     }
+    
+    // Position LEP logo to the right of packshot
+    if (isLEP && logos.length > 0) {
+      const logo = logos[0];
+      if (logo.lepLogo) {
+        const logoOffset = 80; // Space from packshot edge
+        logo.set({
+          left: packshotRightEdge + logoOffset,
+          top: H / 2,
+        });
+        canvas.bringToFront(logo);
+        console.log(`✅ LEP Logo positioned: RIGHT of packshot (${Math.round(packshotRightEdge + logoOffset)}, ${Math.round(H / 2)})`);
+      }
+    }
 
     // ========================================
-    // POSITION 3: DECORATIVE (BOTTOM-RIGHT)
+    // POSITION 3: DECORATIVE (BOTTOM-RIGHT) ✅
     // ========================================
     
     decorative.forEach((decor, i) => {
@@ -390,42 +428,77 @@ function SmartAssistant() {
     const textColor = isLEP ? TESCO_BLUE : '#ffffff';
     const accentColor = isLEP ? TESCO_BLUE : '#ffd700'; // Gold for better contrast
 
-    // ✅ MAIN HEADLINE - LARGE + CONTRASTING
+    // ✅ MAIN HEADLINE
     addText(productInfo.headline.toUpperCase(), {
       left: W / 2,
-      top: 110, // Higher position
+      top: 110,
       originX: 'center',
-      fontSize: 64, // LARGER
+      fontSize: 64,
       fontWeight: 'bold',
       fill: textColor,
-      stroke: 'rgba(0,0,0,0.8)', // Stronger stroke
-      strokeWidth: 3, // THICKER
+      stroke: isLEP ? null : 'rgba(0,0,0,0.8)',
+      strokeWidth: isLEP ? 0 : 3,
       fontFamily: 'Impact, Arial Black',
-      shadow: new fabric.Shadow({
-        color: 'rgba(0,0,0,1)', // SOLID BLACK
-        blur: 25, // STRONGER
+      shadow: isLEP ? null : new fabric.Shadow({
+        color: 'rgba(0,0,0,1)',
+        blur: 25,
         offsetX: 5,
         offsetY: 5
       })
     });
 
-    // ✅ TAGLINE - CONTRASTING COLOR
-    addText(productInfo.tagline, {
-      left: W / 2,
-      top: 190,
-      originX: 'center',
-      fontSize: 30, // LARGER
-      fill: accentColor, // Gold/Yellow for contrast
-      fontWeight: 'bold', // BOLD
-      stroke: 'rgba(0,0,0,0.7)',
-      strokeWidth: 2,
-      shadow: new fabric.Shadow({
-        color: 'rgba(0, 0, 0, 1)',
-        blur: 18,
-        offsetX: 4,
-        offsetY: 4
-      })
-    });
+    // ✅ TAGLINE
+    if (isLEP) {
+      // For LEP: Split tagline in two halves, left-aligned in center
+      const words = productInfo.tagline.split(' ');
+      const midpoint = Math.ceil(words.length / 2);
+      const firstHalf = words.slice(0, midpoint).join(' ');
+      const secondHalf = words.slice(midpoint).join(' ');
+      
+      addText(firstHalf, {
+        left: W / 2,
+        top: 180,
+        originX: 'center',
+        fontSize: 24,
+        fill: TESCO_BLUE,
+        fontWeight: 'normal',
+        textAlign: 'left',
+        shadow: null,
+        stroke: null,
+        strokeWidth: 0
+      });
+      
+      addText(secondHalf, {
+        left: W / 2,
+        top: 210,
+        originX: 'center',
+        fontSize: 24,
+        fill: TESCO_BLUE,
+        fontWeight: 'normal',
+        textAlign: 'left',
+        shadow: null,
+        stroke: null,
+        strokeWidth: 0
+      });
+    } else {
+      // For non-LEP: Single line white tagline
+      addText(productInfo.tagline, {
+        left: W / 2,
+        top: 190,
+        originX: 'center',
+        fontSize: 30,
+        fill: '#ffffff',
+        fontWeight: 'bold',
+        stroke: 'rgba(0,0,0,0.7)',
+        strokeWidth: 2,
+        shadow: new fabric.Shadow({
+          color: 'rgba(0, 0, 0, 1)',
+          blur: 18,
+          offsetX: 4,
+          offsetY: 4
+        })
+      });
+    }
 
     // Price Tile
     if (productInfo.price) {
@@ -441,7 +514,7 @@ function SmartAssistant() {
         strokeWidth: isLEP ? 5 : 0,
         selectable: true,
         isAIGenerated: true,
-        shadow: new fabric.Shadow({
+        shadow: isLEP ? null : new fabric.Shadow({
           color: 'rgba(0, 0, 0, 0.6)',
           blur: 18,
           offsetY: 8
@@ -452,10 +525,12 @@ function SmartAssistant() {
       addText(productInfo.price, {
         left: 215,
         top: 322,
-        fontSize: 52, // LARGER
+        fontSize: 52,
         fontWeight: 'bold',
         fill: isLEP ? TESCO_BLUE : '#ffffff',
-        shadow: null
+        shadow: null,
+        stroke: null,
+        strokeWidth: 0
       });
     }
 
@@ -470,7 +545,7 @@ function SmartAssistant() {
       ry: 38,
       selectable: true,
       isAIGenerated: true,
-      shadow: new fabric.Shadow({
+      shadow: isLEP ? null : new fabric.Shadow({
         color: 'rgba(0, 0, 0, 0.6)',
         blur: 20,
         offsetY: 8
@@ -481,24 +556,26 @@ function SmartAssistant() {
     addText('BUY NOW ▶', {
       left: 255,
       top: H - 132,
-      fontSize: 30, // LARGER
+      fontSize: 30,
       fontWeight: 'bold',
       fill: '#ffffff',
-      shadow: null
+      shadow: null,
+      stroke: null,
+      strokeWidth: 0
     });
 
-    // ✅ TAGS - LARGER FONT
+    // ✅ TAGS
     const tagText = isExclusive ? 'Only at Tesco' : 'Available at Tesco';
     addText(tagText, {
       left: 110,
       top: H - 230,
       originX: 'left',
-      fontSize: 24, // LARGER (was 22)
+      fontSize: 24,
       fontWeight: 'bold',
       fill: isLEP ? TESCO_BLUE : textColor,
-      stroke: 'rgba(0,0,0,0.6)',
-      strokeWidth: 1.5,
-      shadow: new fabric.Shadow({
+      stroke: isLEP ? null : 'rgba(0,0,0,0.6)',
+      strokeWidth: isLEP ? 0 : 1.5,
+      shadow: isLEP ? null : new fabric.Shadow({
         color: 'rgba(0, 0, 0, 0.8)',
         blur: 10,
         offsetX: 2,
@@ -511,39 +588,43 @@ function SmartAssistant() {
         left: 110,
         top: H - 195,
         originX: 'left',
-        fontSize: 20, // LARGER (was 18)
+        fontSize: 20,
         fill: TESCO_BLUE,
-        shadow: null
+        shadow: null,
+        stroke: null,
+        strokeWidth: 0
       });
     }
 
-    // Quality Badge
-    const badge = new fabric.Circle({
-      left: W - 100,
-      top: 95,
-      radius: 60,
-      fill: accentColor,
-      stroke: '#ffffff',
-      strokeWidth: 6,
-      originX: 'center',
-      originY: 'center',
-      selectable: false,
-      isAIGenerated: true,
-      shadow: new fabric.Shadow({ color: 'rgba(0, 0, 0, 0.5)', blur: 15 })
-    });
-    canvas.add(badge);
+    // Quality Badge - ONLY FOR NON-LEP ✅
+    if (!isLEP) {
+      const badge = new fabric.Circle({
+        left: W - 100,
+        top: 95,
+        radius: 60,
+        fill: accentColor,
+        stroke: '#ffffff',
+        strokeWidth: 6,
+        originX: 'center',
+        originY: 'center',
+        selectable: true,
+        isAIGenerated: true,
+        shadow: new fabric.Shadow({ color: 'rgba(0, 0, 0, 0.5)', blur: 15 })
+      });
+      canvas.add(badge);
 
-    addText('TOP\nQUALITY', {
-      left: W - 100,
-      top: 95,
-      fontSize: 15,
-      fontWeight: 'bold',
-      fill: getContrastColor(accentColor),
-      textAlign: 'center',
-      lineHeight: 1.2,
-      shadow: null,
-      selectable: false
-    });
+      addText('TOP\nQUALITY', {
+        left: W - 100,
+        top: 95,
+        fontSize: 15,
+        fontWeight: 'bold',
+        fill: getContrastColor(accentColor),
+        textAlign: 'center',
+        lineHeight: 1.2,
+        shadow: null,
+        selectable: true
+      });
+    }
 
     canvas.renderAll();
     toast.success('✅ Perfect layout created!', { duration: 5000 });
@@ -600,8 +681,17 @@ function SmartAssistant() {
           { type: 'success', message: `✨ ${brandName} ad created!` },
           { type: 'success', message: '🔪 Backgrounds removed' },
           { type: 'success', message: '↔️ Packshots arranged HORIZONTALLY' },
-          { type: 'success', message: '📐 Decorative at BOTTOM-RIGHT' },
-          { type: 'success', message: '🎨 Large contrasting text' },
+          ...(isLEP ? [
+            { type: 'success', message: '🏷️ LEP logo: RIGHT of packshot' },
+            { type: 'success', message: '🎨 Plain blue & white (no shadows)' },
+            { type: 'success', message: '📝 Tagline: Two halves, center-left' },
+            { type: 'success', message: '❌ No quality badge (LEP style)' }
+          ] : [
+            { type: 'success', message: '📍 Logo: TOP-LEFT' },
+            { type: 'success', message: '📐 Decorative: BOTTOM-RIGHT' },
+            { type: 'success', message: '🎨 White tagline with shadows' },
+            { type: 'success', message: '🔓 Quality badge UNLOCKED' }
+          ]),
           { type: 'info', message: `🏷️ "${tagText}"` }
         ]
       });
@@ -631,7 +721,7 @@ function SmartAssistant() {
           AI Smart Assistant
         </h3>
         <p style={{ fontSize: '13px', color: '#6b7280' }}>
-          Horizontal packshots · Bottom-right decorative · Large contrasting text
+          LEP: Plain blue/white · Logo right of packshot · No badge | Non-LEP: Shadows · Top-left logo · Badge unlocked
         </p>
       </div>
 
