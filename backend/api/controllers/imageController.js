@@ -3,7 +3,12 @@ import FormData from 'form-data';
 import { createReadStream } from 'fs';
 import logger from '../../utils/logger.js';
 
-const IMAGE_SERVICE_URL = process.env.IMAGE_SERVICE_URL || 'http://localhost:8000';
+const IMAGE_SERVICE_URL = process.env.IMAGE_SERVICE_URL;
+
+// Add validation:
+if (!IMAGE_SERVICE_URL) {
+  throw new Error('IMAGE_SERVICE_URL environment variable not set');
+}
 
 /**
  * Remove background from image

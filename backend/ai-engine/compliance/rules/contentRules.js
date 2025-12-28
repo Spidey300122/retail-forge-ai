@@ -19,7 +19,8 @@ export class BERTTextRule extends ComplianceRule {
     }
 
     try {
-      const response = await axios.post('http://localhost:8001/classify', {
+      const BERT_SERVICE_URL = process.env.BERT_SERVICE_URL;
+      const response = await axios.post(`${BERT_SERVICE_URL}/classify`, {
         text: text,
         threshold: 0.7
       });
