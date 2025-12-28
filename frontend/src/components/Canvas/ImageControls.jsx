@@ -9,6 +9,7 @@ import useCanvasStore from '../../store/canvasStore';
 import toast from 'react-hot-toast';
 import CropTool from './CropTool';
 import './ImageControls.css';
+import { buildImageServiceUrl } from '../../utils/apiConfig';
 
 function ImageControls() {
   const { canvas, saveState } = useCanvasStore();
@@ -280,7 +281,7 @@ function ImageControls() {
       formData.append('file', blob, 'image.jpg');
       formData.append('count', 5);
 
-      const result = await fetch('http://localhost:8000/process/extract-colors', {
+      const result = await fetch(buildImageServiceUrl('/process/extract-colors'), {
         method: 'POST',
         body: formData,
       });
@@ -370,7 +371,7 @@ function ImageControls() {
         }
       }, 5000);
 
-      const result = await fetch('http://localhost:8000/process/remove-background', {
+      const result = await fetch(buildImageServiceUrl('/process/remove-background'), {
         method: 'POST',
         body: formData,
       });

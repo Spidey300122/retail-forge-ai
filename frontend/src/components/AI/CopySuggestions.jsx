@@ -5,6 +5,7 @@ import useCanvasStore from '../../store/canvasStore';
 import useAIStore from '../../store/aiStore'; 
 import { fabric } from 'fabric';
 import './CopySuggestions.css';
+import { buildApiUrl } from '../../utils/apiConfig';
 
 function CopySuggestions() {
   const { canvas } = useCanvasStore();
@@ -59,7 +60,7 @@ function CopySuggestions() {
     const loadingToast = toast.loading('✍️ AI is writing copy...');
 
     try {
-      const response = await fetch('http://localhost:3000/api/ai/generate-copy', {
+      const response = await fetch(buildApiUrl('/ai/generate-copy'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

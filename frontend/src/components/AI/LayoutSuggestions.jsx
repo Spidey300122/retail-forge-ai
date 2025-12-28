@@ -6,6 +6,7 @@ import useCanvasStore from '../../store/canvasStore';
 import useAIStore from '../../store/aiStore'; // Import the store
 import { fabric } from 'fabric';
 import './LayoutSuggestions.css';
+import { buildApiUrl } from '../../utils/apiConfig';
 
 function LayoutSuggestions() {
   const { canvas } = useCanvasStore();
@@ -51,7 +52,7 @@ function LayoutSuggestions() {
     const loadingToast = toast.loading('🎨 AI is analyzing your product...');
 
     try {
-      const response = await fetch('http://localhost:3000/api/ai/suggest-layouts', {
+      const response = await fetch(buildApiUrl('/ai/suggest-layouts'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

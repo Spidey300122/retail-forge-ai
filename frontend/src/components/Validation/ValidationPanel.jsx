@@ -13,6 +13,7 @@ import useCanvasStore from '../../store/canvasStore';
 import toast from 'react-hot-toast';
 import { debounce } from '../../utils/performanceUtils'; // Day 18 Optimization
 import './ValidationPanel.css';
+import { buildApiUrl } from '../../utils/apiConfig';
 
 function ValidationPanel() {
   const { canvas } = useCanvasStore();
@@ -82,7 +83,7 @@ function ValidationPanel() {
       const creativeData = extractCreativeData();
       
       // NOTE: In production, swap 'localhost' for your env variable
-      const response = await fetch('http://localhost:3000/api/validate/creative', {
+      const response = await fetch(buildApiUrl('/validate/creative'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ creativeData }),

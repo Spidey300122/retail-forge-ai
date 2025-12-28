@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import useCanvasStore from '../../store/canvasStore';
 import { fabric } from 'fabric';
 import './BackgroundGenerator.css';
+import { buildApiUrl } from '../../utils/apiConfig';
 
 function BackgroundGenerator() {
   const { canvas } = useCanvasStore();
@@ -56,7 +57,7 @@ function BackgroundGenerator() {
       }, 8000);
 
       // Changed to use Node Backend API instead of Python direct access
-      const response = await fetch('http://localhost:3000/api/image/generate-background', {
+      const response = await fetch(buildApiUrl('/image/generate-background'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

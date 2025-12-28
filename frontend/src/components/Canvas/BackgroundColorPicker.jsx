@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Pipette, Check, Bold, Italic } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useCanvasStore from '../../store/canvasStore';
+import { buildApiUrl } from '../../utils/apiConfig';
 
 function BackgroundColorPicker({ extractedColors = [] }) {
   // Don't destructure canvas from the hook - get it directly when needed
@@ -12,7 +13,7 @@ function BackgroundColorPicker({ extractedColors = [] }) {
   useEffect(() => {
     const loadRecentColors = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/color/recent?userId=1&limit=8');
+        const response = await fetch(buildApiUrl('/color/recent?userId=1&limit=8'));
         const data = await response.json();
 
         if (response.ok && data.success && Array.isArray(data.data)) {
