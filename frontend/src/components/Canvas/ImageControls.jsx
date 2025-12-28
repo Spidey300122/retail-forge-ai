@@ -382,7 +382,7 @@ function ImageControls() {
         setProcessingStage('Applying result...');
         toast.loading('Applying result...', { id: loadingToast });
         
-        const downloadUrl = `http://localhost:8000${data.download_url}`;
+        const downloadUrl = buildImageServiceUrl(data.download_url);
         
         fabric.Image.fromURL(downloadUrl, (newImg) => {
           newImg.set({
