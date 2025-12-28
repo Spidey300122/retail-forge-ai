@@ -3,6 +3,7 @@ import { Download, Check, FileText, Package } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
 import toast from 'react-hot-toast';
 import './ExportPanel.css';
+import { buildApiUrl } from '../../utils/apiConfig';
 
 const AVAILABLE_FORMATS = [
   { id: 'instagram_post', name: 'Instagram Post', dims: '1080 x 1080' },
@@ -61,8 +62,8 @@ function ExportPanel() {
       };
       formData.append('complianceData', JSON.stringify(complianceData));
 
-      // 3. Send to Backend
-      const response = await fetch('http://localhost:3000/api/export', {
+      // 3. Send to Backend - FIXED: Use buildApiUrl
+      const response = await fetch(buildApiUrl('/export'), {
         method: 'POST',
         body: formData,
       });

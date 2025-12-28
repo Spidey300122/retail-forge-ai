@@ -1,4 +1,4 @@
-// SmartAssistant.jsx - COMPLETE FILE WITH LEP TEXT
+// SmartAssistant.jsx - FIXED VERSION WITH DYNAMIC API URLS
 // LEP: Simple blue "LEP" text to the right of all packshots (no logo image used)
 // Non-LEP: Logo at top-left
 
@@ -8,6 +8,7 @@ import useAIStore from '../../store/aiStore';
 import useCanvasStore from '../../store/canvasStore';
 import { fabric } from 'fabric';
 import toast from 'react-hot-toast';
+import { buildApiUrl, buildImageServiceUrl } from '../../utils/apiConfig';
 
 function SmartAssistant() {
   const { canvas } = useCanvasStore();
@@ -60,14 +61,16 @@ function SmartAssistant() {
       formData.append('file', blob, 'image.jpg');
       formData.append('method', 'fast');
 
-      const bgResponse = await fetch('http://localhost:8000/process/remove-background', {
+      // FIXED: Use buildImageServiceUrl instead of hardcoded localhost
+      const bgResponse = await fetch(buildImageServiceUrl('/process/remove-background'), {
         method: 'POST',
         body: formData,
       });
 
       const data = await bgResponse.json();
       if (data.success) {
-        return `http://localhost:8000${data.download_url}`;
+        // FIXED: Use buildImageServiceUrl for download URL
+        return buildImageServiceUrl(data.download_url);
       }
     } catch (error) {
       console.warn('⚠️ Background removal failed:', error);
@@ -77,7 +80,8 @@ function SmartAssistant() {
 
   const generateCopy = useCallback(async (productInfo) => {
     try {
-      const response = await fetch('http://localhost:3000/api/ai/generate-copy', {
+      // FIXED: Use buildApiUrl instead of hardcoded localhost
+      const response = await fetch(buildApiUrl('/ai/generate-copy'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -117,7 +121,8 @@ function SmartAssistant() {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/image/generate-background', {
+      // FIXED: Use buildApiUrl instead of hardcoded localhost
+      const response = await fetch(buildApiUrl('/image/generate-background'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,9 +135,10 @@ function SmartAssistant() {
 
       const data = await response.json();
       if (data.success) {
+        // FIXED: Use buildImageServiceUrl to construct full URL
         return data.data.download_url.startsWith('http') 
           ? data.data.download_url 
-          : `http://localhost:8000${data.data.download_url}`;
+          : buildImageServiceUrl(data.data.download_url);
       }
     } catch (error) {
       console.warn('Background generation failed:', error);

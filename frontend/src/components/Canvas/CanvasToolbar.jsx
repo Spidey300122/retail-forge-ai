@@ -1,4 +1,4 @@
-// frontend/src/components/Canvas/CanvasToolbar.jsx
+// frontend/src/components/Canvas/CanvasToolbar.jsx - FIXED VERSION
 import { useState } from 'react';
 import { Undo, Redo, Trash2, Download, X, Check, Shield, Loader, AlertCircle, Info, CheckCircle, Lightbulb } from 'lucide-react';
 import useCanvasStore from '../../store/canvasStore';
@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import './CanvasToolbar.css';
 import Tooltip from '../UI/Tooltip';
 import FormatSelector from './FormatSelector';
+import { buildApiUrl } from '../../utils/apiConfig';
 
 // Validation Modal Component (unchanged)
 function ValidationModal({ isOpen, onClose, validationResults, isValidating }) {
@@ -147,7 +148,8 @@ function CanvasToolbar({ isReady, onDimensionsChange }) {
         isAlcohol: false,
       };
 
-      const response = await fetch('http://localhost:3000/api/validate/creative', {
+      // FIXED: Use buildApiUrl instead of hardcoded localhost
+      const response = await fetch(buildApiUrl('/validate/creative'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ creativeData }),
@@ -225,7 +227,8 @@ function CanvasToolbar({ isReady, onDimensionsChange }) {
       // Validate
       let complianceData = null;
       try {
-        const validateResponse = await fetch('http://localhost:3000/api/validate/creative', {
+        // FIXED: Use buildApiUrl instead of hardcoded localhost
+        const validateResponse = await fetch(buildApiUrl('/validate/creative'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ creativeData }),
@@ -249,7 +252,8 @@ function CanvasToolbar({ isReady, onDimensionsChange }) {
         formData.append('complianceData', JSON.stringify(complianceData));
       }
 
-      const exportResponse = await fetch('http://localhost:3000/api/export', {
+      // FIXED: Use buildApiUrl instead of hardcoded localhost
+      const exportResponse = await fetch(buildApiUrl('/export'), {
         method: 'POST',
         body: formData,
       });
