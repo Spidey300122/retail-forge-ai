@@ -69,8 +69,15 @@ function SmartAssistant() {
 
       const data = await bgResponse.json();
       if (data.success) {
-        // FIXED: Use buildImageServiceUrl for download URL
-        return buildImageServiceUrl(data.download_url);
+          const downloadUrl = data.download_url;
+  
+          // Only construct if it's a relative path
+          const fullUrl = downloadUrl.startsWith('http') 
+            ? downloadUrl  // Already a full URL from backend
+            : buildImageServiceUrl(downloadUrl);  // Relative path, construct it
+          
+          console.log('🔗 Background removed, full URL:', fullUrl);
+          return fullUrl;
       }
     } catch (error) {
       console.warn('⚠️ Background removal failed:', error);
