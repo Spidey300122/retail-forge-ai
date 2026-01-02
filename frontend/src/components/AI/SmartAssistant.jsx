@@ -122,7 +122,7 @@ function SmartAssistant() {
   const generateBackground = useCallback(async (category) => {
   // More specific and detailed prompts for better AI generation
   const prompts = {
-    sports: 'vibrant sports stadium with dramatic lighting, energetic crowd atmosphere, dynamic diagonal light rays, deep blue and electric orange colors, motion blur effects, athletic energy',
+    sports: 'basketball court arena with wooden floor, stadium lights, crowd in background, energetic sports venue, dramatic spotlights, arena atmosphere, professional sports photography, athletic action background, court markings visible',
     beverage: 'fresh water droplets and ice cubes on gradient blue background, clean modern aesthetic, refreshing cool tones, subtle bokeh effects, professional product photography style, crisp and clean',
     food: 'warm wooden table with soft natural lighting, appetizing warm colors, subtle food texture backgrounds, inviting rustic atmosphere, professional culinary photography, delicious ambiance',
     lifestyle: 'modern minimalist interior with soft natural light, clean contemporary aesthetic, subtle gradient backgrounds, professional lifestyle photography, sophisticated elegance',
@@ -543,7 +543,7 @@ function SmartAssistant() {
       originX: 'left',
       fontSize: 24,
       fontWeight: 'bold',
-      fill: isLEP ? TESCO_BLUE : textColor,
+      fill: isLEP ? TESCO_BLUE : '#ffffff',
       stroke: isLEP ? null : 'rgba(0,0,0,0.6)',
       strokeWidth: isLEP ? 0 : 1.5,
       shadow: isLEP ? null : new fabric.Shadow({
