@@ -120,25 +120,36 @@ function SmartAssistant() {
   }, []);
 
   const generateBackground = useCallback(async (category) => {
-    const prompts = {
-      sports: 'dynamic athletic environment, energetic atmosphere',
-      beverage: 'refreshing cool atmosphere, clean aesthetic',
-      food: 'warm appetizing setting, inviting atmosphere',
-      default: 'professional modern setting, clean aesthetic'
-    };
+  // More specific and detailed prompts for better AI generation
+  const prompts = {
+    sports: 'vibrant sports stadium with dramatic lighting, energetic crowd atmosphere, dynamic diagonal light rays, deep blue and electric orange colors, motion blur effects, athletic energy',
+    beverage: 'fresh water droplets and ice cubes on gradient blue background, clean modern aesthetic, refreshing cool tones, subtle bokeh effects, professional product photography style, crisp and clean',
+    food: 'warm wooden table with soft natural lighting, appetizing warm colors, subtle food texture backgrounds, inviting rustic atmosphere, professional culinary photography, delicious ambiance',
+    lifestyle: 'modern minimalist interior with soft natural light, clean contemporary aesthetic, subtle gradient backgrounds, professional lifestyle photography, sophisticated elegance',
+    default: 'premium quality gradient background with subtle geometric patterns, professional modern aesthetic, soft lighting, clean sophisticated look, contemporary design'
+  };
 
-    try {
-      // FIXED: Use buildApiUrl instead of hardcoded localhost
-      const response = await fetch(buildApiUrl('/image/generate-background'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: prompts[category] || prompts.default,
-          style: category === 'sports' ? 'energetic' : 'professional',
-          width: 1080,
-          height: 1080
-        }),
-      });
+  // Map each category to its most suitable style
+  const styleMap = {
+    sports: 'vibrant',
+    beverage: 'modern',
+    food: 'vibrant',
+    lifestyle: 'minimal',
+    default: 'professional'
+  };
+
+  try {
+    // FIXED: Use buildApiUrl instead of hardcoded localhost
+    const response = await fetch(buildApiUrl('/image/generate-background'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: prompts[category] || prompts.default,
+        style: styleMap[category] || styleMap.default,
+        width: 1080,
+        height: 1080
+      }),
+    });
 
       const data = await response.json();
       if (data.success) {
@@ -392,16 +403,15 @@ function SmartAssistant() {
 
     // TEXT
     const TESCO_BLUE = '#00539F';
-    const textColor = isLEP ? TESCO_BLUE : '#ffffff';
 
-    // HEADLINE - LEFT ALIGNED
+    // HEADLINE - LEFT ALIGNED - ALWAYS BRIGHT WHITE
     addText(productInfo.headline.toUpperCase(), {
       left: 110,
       top: 110,
       originX: 'left',
       fontSize: 64,
       fontWeight: 'bold',
-      fill: textColor,
+      fill: '#ffffff',  // Always bright white
       stroke: isLEP ? null : 'rgba(0,0,0,0.8)',
       strokeWidth: isLEP ? 0 : 3,
       fontFamily: 'Impact, Arial Black',
