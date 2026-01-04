@@ -7,6 +7,33 @@
 
 ---
 
+## 🎬 Try It Yourself
+
+### 📺 Watch the Demo
+**YouTube Video**: https://youtu.be/qu0Nlqkx1kI
+or
+**Local Video**: 
+<video src="./workflow-retail-forge-ai.mp4" controls></video>
+
+See Retail Forge AI in action - from upload to export in 5 minutes!
+
+### 🚀 Experience the Live App
+**Live Prototype**: https://retail-forge-ai.vercel.app
+
+Fully functional application - create your own compliant retail media creatives!
+
+⚠️ **First-time load note**: Backend services may take 30-60 seconds to wake up from sleep mode. Please refresh if needed.
+
+### 💻 Explore the Code
+**GitHub Repository**: github.com/Spidey300122/retail-forge-ai
+
+Full source code with comprehensive documentation and setup instructions.
+
+### 📧 Get in Touch
+**Contact**: shauryamansaxena28@gmail.com
+
+Questions? Feedback? We'd love to hear from you!
+
 ## 🎯 Overview
 
 Retail Forge AI enables brands to create professional, compliant retail media creatives in **5 minutes instead of weeks**. Our multi-agent AI system combines intelligent design assistance with real-time compliance validation against 30+ Tesco retail media rules.
@@ -1018,4 +1045,29 @@ Ready to build your first creative? Follow this checklist:
 
 **Ready to break down the creative barrier?** 🚀
 
-Start building compliant, professional retail media creatives in minutes instead of weeks!
+## 🎬 Try It Yourself
+
+### 📺 Watch the Demo
+**YouTube Video**: https://youtu.be/qu0Nlqkx1kI
+or
+**Local Video**: 
+<video src="./workflow-retail-forge-ai.mp4" controls></video>
+
+See Retail Forge AI in action - from upload to export in 5 minutes!
+
+### 🚀 Experience the Live App
+**Live Prototype**: https://retail-forge-ai.vercel.app
+
+Fully functional application - create your own compliant retail media creatives!
+
+⚠️ **First-time load note**: Backend services may take 30-60 seconds to wake up from sleep mode. Please refresh if needed.
+
+### 💻 Explore the Code
+**GitHub Repository**: github.com/Spidey300122/retail-forge-ai
+
+Full source code with comprehensive documentation and setup instructions.
+
+### 📧 Get in Touch
+**Contact**: shauryamansaxena28@gmail.com
+
+Questions? Feedback? We'd love to hear from you!
