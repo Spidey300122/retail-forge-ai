@@ -12,14 +12,13 @@
 ### 📺 Watch the Demo
 **YouTube Video**: https://youtu.be/qu0Nlqkx1kI
 or
-**Local Video**: 
-<video src="./workflow-retail-forge-ai.mp4" controls></video>
+**Local Video**: [Download Demo Video](./workflow-retail-forge-ai.mp4)
 
 See Retail Forge AI in action - from upload to export in 5 minutes!
 
 ### 🚀 Experience the Live App
 **Live Prototype**: https://retail-forge-ai.vercel.app
-
+**Note**: Initial requests may experience a slight delay as backend services initialize from sleep mode.
 Fully functional application - create your own compliant retail media creatives!
 
 ⚠️ **First-time load note**: Backend services may take 30-60 seconds to wake up from sleep mode. Please refresh if needed.
@@ -1050,14 +1049,13 @@ Ready to build your first creative? Follow this checklist:
 ### 📺 Watch the Demo
 **YouTube Video**: https://youtu.be/qu0Nlqkx1kI
 or
-**Local Video**: 
-<video src="./workflow-retail-forge-ai.mp4" controls></video>
+**Local Video**: [Download Demo Video](./workflow-retail-forge-ai.mp4)
 
 See Retail Forge AI in action - from upload to export in 5 minutes!
 
 ### 🚀 Experience the Live App
 **Live Prototype**: https://retail-forge-ai.vercel.app
-
+**Note**: Initial requests may experience a slight delay as backend services initialize from sleep mode.
 Fully functional application - create your own compliant retail media creatives!
 
 ⚠️ **First-time load note**: Backend services may take 30-60 seconds to wake up from sleep mode. Please refresh if needed.
