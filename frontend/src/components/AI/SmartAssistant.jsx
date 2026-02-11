@@ -125,7 +125,7 @@ function SmartAssistant() {
     sports: 'basketball court arena with wooden floor, stadium lights, crowd in background, energetic sports venue, dramatic spotlights, arena atmosphere, professional sports photography, athletic action background, court markings visible',
     beverage: 'fresh water droplets and ice cubes on gradient blue background, clean modern aesthetic, refreshing cool tones, subtle bokeh effects, professional product photography style, crisp and clean',
     food: 'warm wooden table with soft natural lighting, appetizing warm colors, subtle food texture backgrounds, inviting rustic atmosphere, professional culinary photography, delicious ambiance',
-    lifestyle: 'modern minimalist interior with soft natural light, clean contemporary aesthetic, subtle gradient backgrounds, professional lifestyle photography, sophisticated elegance',
+    lifestyle: 'clean blue red blue horizontal color bands, Pepsi brand colors gradient, refreshing water droplets scattered across surface, subtle light reflections, crisp modern aesthetic, professional beverage photography, smooth color transitions, minimalist design with condensation droplets, bright and energetic atmosphere',
     default: 'premium quality gradient background with subtle geometric patterns, professional modern aesthetic, soft lighting, clean sophisticated look, contemporary design'
   };
 
